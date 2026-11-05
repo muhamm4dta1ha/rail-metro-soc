@@ -1,8 +1,10 @@
 # PLAN - SOC for Railway & Metro Systems (4 modules, 4 people)
 
-> **Canonical plan** - v0.3 - 2026-11-05 - team: **Talha, Furqan, Roshni, Anum**
+> **Canonical plan** - v0.4 - 2026-11-05 - team: **Talha, Furqan, Roshni, Anum**
 > Repo: `rail-metro-soc` - branches `main` (release) and `develop` (integration) - change this file only through a PR (`docs/docs/<slug>` branch).
 > Source brief: the course document *Project Details* (kept in the private workspace, not in this repo). Assignment confirmed by the team on 2026-11-05: **Talha = simulation (M1), Furqan = attack generation (M2), Roshni = attack detection (M3), Anum = ML (M4)**; Talha is also repo admin and release manager.
+>
+> **Timeline changed 2026-11-05: the team has one day (2026-11-06), not six weeks.** This plan stays the full reference (every requirement, every hard constraint, the complete task backlog) so nothing required gets missed, but section 8 is now a one-day timeline and the actual step-by-step for tomorrow is the short, per-person **[plan/DAY1_PLAN.md](DAY1_PLAN.md)** - read that one first. Build a small, honest system: every requirement in section 2 met, nothing bigger pretended. See HC-23.
 
 ## Contents
 
@@ -39,6 +41,8 @@
 | **M4 ML Threat Detection** | **Anum** | Furqan | extension that feeds criterion 3 | An ML detector that finds the three scenarios (and unknown anomalies) and shows its alerts in the SIEM dashboard | `src/ml/` |
 
 **How we work:** every change starts on its own branch -> pull request into `develop` -> CI must be green and the reviewer must approve -> merge. `develop` goes to `main` only through a release PR at a milestone (section 7).
+
+**One day, not six weeks (2026-11-06):** this is the full plan - everything a complete submission needs, so no requirement is missed - but today's actual work is scoped down to a small, honest MVP. Follow **[plan/DAY1_PLAN.md](DAY1_PLAN.md)** for the concrete, timeboxed, per-person steps; treat the task tables in sections 9-12 as the complete backlog, not as today's to-do list.
 
 ---
 
@@ -82,6 +86,7 @@ Every row is a rule the team cannot trade away. *Enforced by* says where the rul
 | HC-20 | **No secrets, no files over 10 MB, no pcaps/datasets/models in git.** | Guardrail | `.gitignore`; CI `policy_check.py files` |
 | HC-21 | **Reproducible.** From a clean clone the documented commands bring up the lab and the tests; seeds and versions are recorded. | Guardrail | X-06 clean-machine test; seeded generators |
 | HC-22 | Safety-related railway functions (points, signals, interlocking, train protection) are **neither simulated nor attacked**; scenario C is time-boxed, rate-capped and has a kill switch. | Guardrail | Rules of Engagement; `LabScope` caps; `test_station_controllers_are_monitoring_class_only` |
+| HC-23 | **Real protocols, nothing assumed or makeshifted.** Every simulated exchange is genuine wire traffic from a real client and a real server of that protocol (HTTP, MQTT, Modbus/TCP, SSH) - never a JSON line written to pretend an exchange happened. The matching schema log is written by the component that actually handled the real exchange. Keep each protocol's implementation small and plain; one working minimal version beats several elaborate, unfinished ones. | Team (added for the one-day build) | Manual review in every PR (a pcap-based automated check is a later stretch goal, not assumed to exist); `plan/DAY1_PLAN.md` |
 
 ---
 
@@ -329,7 +334,9 @@ The link has the form `https://github.com/<OWNER>/rail-metro-soc/compare/develop
 
 ## 8. Roadmap and milestones
 
-Assumption: about six weeks from the day the repo is pushed; scale the phases to the real deadline (**deadline not yet known - see X-01**). Each gate is a tagged release.
+**Changed 2026-11-05: one day, not six weeks.** The phased, multi-week roadmap below is kept as the *full-ambition reference* (what a longer project would do, and in what order) - it is **not** today's to-do list. Today's actual steps are the short **[plan/DAY1_PLAN.md](DAY1_PLAN.md)**, which compresses Phase 0 + the start of Phases 1-3 into four checkpoints run in parallel by all four people, aimed squarely at the seven deliverables (HC-07) and nothing more. If a future session adds more days, resume at Phase 2 below using whatever Day 1 did not finish.
+
+Assumption for the table below: about six weeks from the day the repo is pushed, *if* the team had six weeks. Each gate is a tagged release.
 
 | Phase | Window | Talha | Furqan | Roshni | Anum | Gate |
 |---|---|---|---|---|---|---|
@@ -341,12 +348,26 @@ Assumption: about six weeks from the day the repo is pushed; scale the phases to
 | **5 Integration and evaluation** | week 5 | Support fixes; report architecture/protocol chapters | X-06 clean-machine test; final scenario docs | M3-10 evaluation with Anum | M4-11 SIEM integration with Roshni; M4-12 cards | Release candidate `v0.9`; evaluation tables final |
 | **6 Report and demo** | week 6 | X-07 report integration | Chapter: attacks and mitigations | Chapter: detection and dashboard | Chapter: ML and evaluation | Report done, two rehearsals (X-08) -> `v1.0` |
 
+### 8.1 The one day (2026-11-06)
+
+Four checkpoints, worked in parallel; cross into the next block only once its checkpoint is true. Full detail, commands and library choices: **[plan/DAY1_PLAN.md](DAY1_PLAN.md)**.
+
+| Block | Talha (M1) | Furqan (M2) | Roshni (M3) | Anum (M4) | Checkpoint |
+|---|---|---|---|---|---|
+| Morning (independent) | Build the real-protocol services (HTTP, Modbus/TCP, SSH; MQTT if time) and the traffic driver | Write scenarios A and C against a throwaway local copy of the HTTP service | Stand up Wazuh single-node; prepare Wireshark filters | Re-run the existing ML CLI on a tiny hand-made sample to confirm it still passes | - |
+| Checkpoint 1 | **Lab is up: real pcap + schema-valid logs exist** | | | | gate |
+| Early afternoon | Support; write the architecture note | Run all three scenarios for real; append ground truth | Capture Wireshark evidence from the real pcap; write/validate rules | Build `dataset_v1` from the real normal + attack data, train | - |
+| Checkpoint 2 | | | **Each scenario fires a rule; ML produces `ml.alert` for at least one** | | gate |
+| Late afternoon | Protocol-stack note; help wherever stuck | Finish scenario docs | Build one simple dashboard (overview + 3 scenarios + ML panel) | Evaluate against held-out runs | - |
+| End of day | Everyone opens their PR into `develop`; 10-minute sync; note genuinely unfinished items honestly (HC-23) - do not claim something works that was not actually run | | | | - |
+
 ---
 
 ## 9. Module 1 - Simulation & Architecture (Talha)
 
 **Owner:** Talha - **Reviewer:** Roshni - **Rubric:** criterion 1 (40 marks) - **Folder:** `src/simulation/` - **Starter code:** asset inventory, traffic profiles, deterministic normal-traffic generator, PIS stub, compose file with five isolated zones, tests.
 **Gives:** Furqan the lab and reset script; Roshni log sources and pcaps; Anum normal data and the asset inventory.
+**Today (2026-11-06):** the task table below is the full backlog, not today's steps - follow [plan/DAY1_PLAN.md](DAY1_PLAN.md) section "Talha" instead, which covers M1-01, M1-03/04/05/06 and M1-09 with **real** HTTP, Modbus/TCP and SSH traffic (HC-23); the rest stays open for later.
 
 | ID | Who | Task | Output | Done when | Needs | Size |
 |---|---|---|---|---|---|---|
@@ -370,6 +391,7 @@ Assumption: about six weeks from the day the repo is pushed; scale the phases to
 
 **Owner:** Furqan - **Reviewer:** Talha - **Rubric:** criterion 2 (30 marks) - **Folder:** `src/attacks/` - **Starter code:** safety harness (`LabScope`, kill switch, caps), scenario framework, recorder (manifest + ground-truth row), campaign runner, three scenario stubs and docs, Rules of Engagement.
 **Gives:** Talha attacker/reset requirements; Roshni indicators, evidence and baselines; Anum ground truth and campaign runs.
+**Today (2026-11-06):** the task table below is the full backlog, not today's steps - follow [plan/DAY1_PLAN.md](DAY1_PLAN.md) section "Furqan" instead, which covers M2-01, M2-04/06 fully and a best-effort M2-05 (depends on Talha's Modbus service), M2-08/09; a full campaign (M2-10) and the mitigations writeup (M2-12) stay open for later.
 
 | ID | Who | Task | Output | Done when | Needs | Size |
 |---|---|---|---|---|---|---|
@@ -392,6 +414,7 @@ Assumption: about six weeks from the day the repo is pushed; scale the phases to
 
 **Owner:** Roshni - **Reviewer:** Anum - **Rubric:** criterion 3 (30 marks) - **Folder:** `src/detection/` - **Starter code:** Wazuh rule and decoder stubs (reserved id ranges), offline rule linter, detection evaluator for rule and ML alerts, query templates, Wireshark filters, deployment notes.
 **Gives:** Talha the log-source sign-off; Furqan per-scenario detectability feedback; Anum the SIEM path for `ml.alert` and alert exports.
+**Today (2026-11-06):** the task table below is the full backlog, not today's steps - follow [plan/DAY1_PLAN.md](DAY1_PLAN.md) section "Roshni" instead, which covers M3-01/02/04/05/06/07 and a minimal M3-08; alerting playbooks (M3-09) and tuning (M3-11) stay open for later.
 
 | ID | Who | Task | Output | Done when | Needs | Size |
 |---|---|---|---|---|---|---|
@@ -414,6 +437,7 @@ Assumption: about six weeks from the day the repo is pushed; scale the phases to
 
 **Owner:** Anum - **Reviewer:** Furqan - **Rubric:** extension that feeds criterion 3 - **Folder:** `src/ml/` - **Starter code:** window features, labelled-dataset builder with run-grouped split, threshold baseline, One-Class SVM / Isolation Forest and random-forest detectors, metrics, `ml.alert` inference, CLI, tests.
 **Gives:** Talha the data needs; Furqan label feedback; Roshni model output and the `ml.alert` stream.
+**Today (2026-11-06):** the task table below is the full backlog, not today's steps - follow [plan/DAY1_PLAN.md](DAY1_PLAN.md) section "Anum" instead, which covers M4-01/02/04/06/08/09/10/11 on the real Day-1 data; the random-forest model (M4-07), model/dataset cards (M4-12) and the drift stretch (M4-13) stay open for later.
 
 **Approach.** Supervised models learn the three known scenarios; unsupervised models learn *normal* behaviour and flag deviations (OT traffic is regular, attacks are rare, so anomaly detection is the main idea). Starter finding: on this regular traffic an Isolation Forest could not flag a 60-failure burst while a One-Class SVM did - re-check on the real campaign data. Evaluation is on **held-out runs**, compared against the threshold baseline and the SIEM rules; benign look-alikes (typo logins, authorised maintenance writes, rush-hour bursts) are part of the test so "any failure / any write / any burst" is not learnable. The ML alerts go into the **same** SIEM dashboard as the rule alerts so the ML work counts toward criterion 3.
 
@@ -437,16 +461,18 @@ Assumption: about six weeks from the day the repo is pushed; scale the phases to
 
 ## 13. Cross-module tasks
 
+X-01, X-02 and X-03 are done (repo pushed 2026-11-05; see `context/01_DECISIONS.md` for X-01's instructor questions, still open). **X-04, X-05 and X-08 need more than one day and are explicitly postponed** - revisit them only if the team gets more time; they are not required for tomorrow's deliverable. X-06 and X-07 are compressed into Day 1's end-of-day step (section 8.1) rather than dropped, because HC-21 (reproducible) and the report itself are both required.
+
 | ID | Who | Task | Output | Done when |
 |---|---|---|---|---|
-| X-01 | Talha (all confirm) | Kickoff: confirm owners, register the idea (HC-10), confirm group size of 4 with the instructor (HC-11), ask whether the ML module is graded, fix deadlines | decisions written in the team chat and in section 8 | Decisions made |
-| X-02 | Talha | GitHub setup: repo, `main` + `develop`, protection, first push, collaborators | `docs/github_setup.md` | CI green on `develop`; protection on |
+| X-01 | Talha (all confirm) | Kickoff: confirm owners, register the idea (HC-10), confirm group size of 4 with the instructor (HC-11), ask whether the ML module is graded, fix deadlines | decisions written in the team chat and in section 8 | Decisions made - **owners/group size done; instructor questions still open** |
+| X-02 | Talha | GitHub setup: repo, `main` + `develop`, protection, first push, collaborators | `docs/github_setup.md` | **Done 2026-11-05** (main+develop pushed); protection/collaborators still open |
 | X-03 | Talha (events), Furqan (ground truth); all approve | Contract freeze v0.1: schema, ground truth, assets, IP plan | `docs/contracts/` | All four approve; tag `contracts-v0.1` |
-| X-04 | Talha, Furqan, Roshni, Anum | Weekly integration day with a short demo from each module | notes in PR descriptions | Recurring |
-| X-05 | Each person presents their module | Knowledge-transfer sessions (weeks 2 and 4) and a Q&A bank of 10 questions per module | `docs/report/qa_bank.md` | Everyone answers cross-module questions (HC-09) |
-| X-06 | Furqan (on a second laptop, with Talha's README) | Clean-machine reproducibility test (HC-21) | checklist in the PR | Passes from a fresh clone |
-| X-07 | Talha (integrator); all write chapters | Final joint evaluation and report assembly | `docs/report/` | Report v1 complete |
-| X-08 | Talha, Furqan, Roshni, Anum | Demo rehearsals and viva preparation | `docs/report/demo_script.md` | Two full rehearsals |
+| ~~X-04~~ | ~~all~~ | ~~Weekly integration day~~ | - | **Postponed - needs more than one day** |
+| ~~X-05~~ | ~~all~~ | ~~Knowledge-transfer sessions weeks 2 and 4, Q&A bank~~ | - | **Postponed** - HC-09 met today instead by each person briefly walking the other three through their own real traffic/attack/detection/alert at the end-of-day sync |
+| X-06 | Furqan (on a second laptop, with Talha's README) | Clean-machine reproducibility test (HC-21) | checklist in the PR | A quick version runs at end of Day 1 (section 8.1); the full second-laptop test can follow later |
+| X-07 | Talha (integrator); all write chapters | Final joint evaluation and report assembly | `docs/report/` | A short Day-1 report (what was built, real screenshots/evidence, honest gaps) rather than the full chapter set |
+| ~~X-08~~ | ~~all~~ | ~~Demo rehearsals and viva preparation~~ | - | **Postponed - needs more than one day** |
 
 ---
 
@@ -517,6 +543,8 @@ The brief's rubric has no ML row. Ask the instructor how the ML module is assess
 | Scope creep | Missed deadline | Anything beyond the task tables goes to a backlog list; reviewer says no | Talha |
 | Group of four vs brief's three | Marks or rule problem | Written instructor confirmation (X-01) | Talha |
 | Branch protection unavailable on a free private repo | Rules rely on discipline | Make the repo public or use GitHub Pro (Student Developer Pack); CI still runs | Talha |
+| One day is not enough for everything in sections 9-12 | Rushed or faked work | Scope cut to the Day-1 MVP (section 8.1, `plan/DAY1_PLAN.md`); anything not really working is logged as a gap, never claimed as done (HC-23) | all |
+| "Real protocol" services (pymodbus, paramiko, real sshd) eat the one day in setup/debugging | Less time for attacks/detection/ML | Build in the fixed order HTTP -> Modbus -> SSH (cheapest first); stop and hand off what's real at the midday checkpoint even if SSH/MQTT is not done | Talha |
 
 ---
 
