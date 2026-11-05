@@ -17,7 +17,7 @@ COMPOSE = ROOT / "src" / "simulation" / "docker-compose.yml"
 ASSETS = ROOT / "src" / "simulation" / "config" / "assets.csv"
 PLAN = ROOT / "plan" / "PLAN.md"
 
-HARD_CONSTRAINT_IDS = [f"HC-{n:02d}" for n in range(1, 23)]
+HARD_CONSTRAINT_IDS = [f"HC-{n:02d}" for n in range(1, 24)]
 TEAM = ("Talha", "Furqan", "Roshni", "Anum")
 
 # The repo root stays tidy: code in src/, docs in docs/, plan in plan/, lab outputs in lab/.
