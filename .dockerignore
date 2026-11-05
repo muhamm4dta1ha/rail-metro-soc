@@ -1,0 +1,14 @@
+.git
+.github
+.venv
+venv
+lab
+docs
+plan
+tests
+**/__pycache__
+**/*.pyc
+*.pcap
+*.pcapng
+.pytest_cache
+.ruff_cache

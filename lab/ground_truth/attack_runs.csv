@@ -1,0 +1,1 @@
+run_id,scenario_id,variant,start_utc,end_utc,attacker_ips,victim_ips,victim_assets,techniques,params_json,evidence_dir,notes

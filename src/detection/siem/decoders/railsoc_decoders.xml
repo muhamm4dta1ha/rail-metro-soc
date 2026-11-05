@@ -1,0 +1,15 @@
+<!--
+  RailSOC custom Wazuh decoders - STARTER (task M3-03).
+  Schema events are JSON and use Wazuh's built-in JSON decoder (no custom decoder needed).
+  Add decoders here only for NON-JSON sources (gateway firewall lines, signaling-test logs).
+  Validate with wazuh-logtest on the Wazuh version you deploy.
+-->
+<decoder name="railsoc-gw">
+  <prematch>^RAILSOC-GW </prematch>
+</decoder>
+
+<decoder name="railsoc-gw-fields">
+  <parent>railsoc-gw</parent>
+  <regex>SRC=(\S+) DST=(\S+) PROTO=(\S+) DPT=(\d+) ACTION=(\w+)</regex>
+  <order>srcip, dstip, protocol, dstport, action</order>
+</decoder>

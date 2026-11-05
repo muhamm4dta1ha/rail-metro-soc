@@ -1,0 +1,6 @@
+# Defaults for the ML pipeline (task M4-02). CLI flags override these.
+window_s = 10          # time window for features (seconds)
+target_fpr = 0.01      # share of NORMAL windows the anomaly detector may flag
+test_fraction = 0.3    # share of attack RUNS / benign TIME held out for testing
+seed = 1               # every random choice is seeded for reproducibility
+anomaly_method = "ocsvm"   # "ocsvm" or "isolation_forest" (see AnomalyDetector in models.py for why ocsvm)

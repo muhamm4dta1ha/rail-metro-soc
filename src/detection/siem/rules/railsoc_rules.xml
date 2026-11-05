@@ -1,0 +1,81 @@
+<!--
+  RailSOC custom Wazuh rules - STARTER (tasks M3-04 / M4-11).
+  NOT yet validated against a running Wazuh: test every rule with wazuh-logtest on the exact
+  version you deploy, then fix syntax and semantics. CI only lints structure (railsoc_detection).
+
+  Reserved ids: 100000-100099 common | 100100-100199 scenario A | 100200-100299 scenario B |
+                100300-100399 scenario C | 100400-100499 ML alerts
+  Events are JSON Lines following docs/contracts/event_schema.md (JSON decoder).
+  Every rule with level 7 or higher needs a MITRE ATT&CK mapping (checked by the lint).
+-->
+<group name="railsoc,">
+
+  <rule id="100000" level="0">
+    <decoded_as>json</decoded_as>
+    <field name="event.dataset" type="pcre2">^[a-z0-9_]+(\.[a-z0-9_]+)*$</field>
+    <description>RailSOC: base rule for schema events</description>
+  </rule>
+
+  <!-- Scenario A: unauthorized administrative access -->
+  <rule id="100100" level="3">
+    <if_sid>100000</if_sid>
+    <field name="event.dataset" type="pcre2">^pis\.app$</field>
+    <field name="event.action">login</field>
+    <field name="event.outcome">failure</field>
+    <description>RailSOC A: PIS login failure</description>
+    <mitre>
+      <id>T1110</id>
+    </mitre>
+    <group>authentication_failed,railsoc_a,</group>
+  </rule>
+
+  <rule id="100101" level="10" frequency="8" timeframe="60">
+    <if_matched_sid>100100</if_matched_sid>
+    <same_field>source.ip</same_field>
+    <description>RailSOC A: repeated PIS login failures from one source (possible credential guessing)</description>
+    <mitre>
+      <id>T1110</id>
+    </mitre>
+    <group>authentication_failures,railsoc_a,</group>
+  </rule>
+
+  <!-- Scenario B: anomalous communications (TODO M3-04: new-asset and discovery-pattern rules) -->
+  <rule id="100200" level="10">
+    <if_sid>100000</if_sid>
+    <field name="event.dataset" type="pcre2">^scada\.command$</field>
+    <field name="modbus.function_code" type="pcre2">^(5|6|15|16)$</field>
+    <field name="source.ip" type="pcre2" negate="yes">^10\.60\.10\.23$</field>
+    <description>RailSOC B: Modbus write from a source other than the engineering workstation</description>
+    <mitre>
+      <id>T0855</id>
+    </mitre>
+    <group>railsoc_b,</group>
+  </rule>
+
+  <!-- Scenario C: service disruption (TODO M3-04: rate-spike and health-check rules) -->
+  <rule id="100300" level="3">
+    <if_sid>100000</if_sid>
+    <field name="event.dataset" type="pcre2">^pis\.app$</field>
+    <field name="http.response.status_code" type="pcre2">^5\d\d$</field>
+    <description>RailSOC C: PIS server error response</description>
+    <group>railsoc_c,</group>
+  </rule>
+
+  <rule id="100301" level="10" frequency="10" timeframe="30">
+    <if_matched_sid>100300</if_matched_sid>
+    <description>RailSOC C: burst of PIS server errors (possible service disruption)</description>
+    <mitre>
+      <id>T1499</id>
+    </mitre>
+    <group>railsoc_c,</group>
+  </rule>
+
+  <!-- ML alerts emitted by Module 4 (dataset ml.alert) -->
+  <rule id="100400" level="6">
+    <if_sid>100000</if_sid>
+    <field name="event.dataset" type="pcre2">^ml\.alert$</field>
+    <description>RailSOC ML: anomalous activity detected by the ML model</description>
+    <group>railsoc_ml,</group>
+  </rule>
+
+</group>

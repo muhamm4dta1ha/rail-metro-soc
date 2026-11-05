@@ -1,0 +1,23 @@
+asset_id,hostname,zone,type,ip,protocols,notes
+WS-01,ws-ops-01,corporate_it,workstation,10.60.10.21,http,Operations staff workstation (synthetic)
+WS-02,ws-ops-02,corporate_it,workstation,10.60.10.22,http,Operations staff workstation (synthetic)
+WS-03,ws-eng-01,corporate_it,workstation,10.60.10.23,http;ssh;modbus,Maintenance engineering workstation (authorised maintenance writes)
+GW-IT,gateway,corporate_it,gateway,10.60.10.254,,Inter-zone gateway - corporate interface
+PIS-01,pis-01,dmz_ops,pis_server,10.60.20.10,http,Passenger information system (admin portal and arrivals API)
+MQTT-01,mqtt-01,dmz_ops,mqtt_broker,10.60.20.11,mqtt,Station display message broker
+OCC-01,occ-scada-01,dmz_ops,scada_master,10.60.20.20,modbus;http,OCC poller and historian (synthetic)
+JH-01,jumphost-01,dmz_ops,jump_host,10.60.20.30,ssh,Maintenance jump host
+GW-DMZ,gateway,dmz_ops,gateway,10.60.20.254,,Inter-zone gateway - DMZ/ops interface
+ST01-CTL,st01-ctl,station_field,station_controller,10.60.30.11,modbus,Station 01 monitoring controller (non-safety telemetry only)
+ST02-CTL,st02-ctl,station_field,station_controller,10.60.30.12,modbus,Station 02 monitoring controller (non-safety telemetry only)
+ST03-CTL,st03-ctl,station_field,station_controller,10.60.30.13,modbus,Station 03 monitoring controller (non-safety telemetry only)
+ST04-CTL,st04-ctl,station_field,station_controller,10.60.30.14,modbus,Station 04 monitoring controller (non-safety telemetry only)
+ST01-DSP,st01-dsp,station_field,station_display,10.60.30.21,mqtt;http,Station 01 passenger information display
+ST02-DSP,st02-dsp,station_field,station_display,10.60.30.22,mqtt;http,Station 02 passenger information display
+ST03-DSP,st03-dsp,station_field,station_display,10.60.30.23,mqtt;http,Station 03 passenger information display
+ST04-DSP,st04-dsp,station_field,station_display,10.60.30.24,mqtt;http,Station 04 passenger information display
+GW-OT,gateway,station_field,gateway,10.60.30.254,,Inter-zone gateway - station/field interface
+ATK-01,attacker-01,attacker_lab,attacker_host,10.60.66.10,any,Lab-only attacker host (Module 2) - only active inside scenario runs
+GW-ATK,gateway,attacker_lab,gateway,10.60.66.254,,Inter-zone gateway - attacker lab interface
+SIEM-01,wazuh,soc_mgmt,siem,10.60.99.10,syslog;https,Wazuh manager and dashboard (Module 3)
+GW-MGMT,gateway,soc_mgmt,gateway,10.60.99.254,,Inter-zone gateway - SOC management interface

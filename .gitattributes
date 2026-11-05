@@ -1,0 +1,21 @@
+# Normalise line endings. Windows checkouts must NOT turn shell scripts / Dockerfiles into CRLF,
+# otherwise containers fail with "bad interpreter" errors.
+* text=auto
+*.sh text eol=lf
+*.py text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.xml text eol=lf
+*.conf text eol=lf
+*.csv text eol=lf
+Dockerfile text eol=lf
+
+# Binary files
+*.pcap binary
+*.pcapng binary
+*.docx binary
+*.png binary
+*.jpg binary

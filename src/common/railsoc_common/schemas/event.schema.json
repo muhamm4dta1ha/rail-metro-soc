@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Rail/Metro SOC event (contract v0.1)",
+  "description": "One JSON object per log, telemetry or alert event. Timestamps are UTC. Ground-truth labels are NEVER part of an event. host.name = machine that produced the line; asset = what the event is about.",
+  "type": "object",
+  "required": ["@timestamp", "event", "host"],
+  "additionalProperties": false,
+  "properties": {
+    "@timestamp": { "$ref": "#/$defs/timestamp" },
+    "event": {
+      "type": "object",
+      "required": ["dataset", "category", "action", "outcome"],
+      "additionalProperties": false,
+      "properties": {
+        "dataset": { "type": "string", "pattern": "^[a-z0-9_]+(\\.[a-z0-9_]+)*$" },
+        "category": {
+          "enum": [
+            "authentication",
+            "network",
+            "configuration",
+            "availability",
+            "process",
+            "telemetry",
+            "web",
+            "session",
+            "intrusion_detection"
+          ]
+        },
+        "action": { "type": "string", "pattern": "^[a-z0-9_-]+$" },
+        "outcome": { "enum": ["success", "failure", "unknown"] },
+        "duration_ms": { "type": "number", "minimum": 0 }
+      }
+    },
+    "host": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": { "name": { "type": "string", "minLength": 1 } }
+    },
+    "asset": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "zone": { "enum": ["corporate_it", "dmz_ops", "station_field", "attacker_lab", "soc_mgmt"] },
+        "type": { "type": "string", "minLength": 1 }
+      }
+    },
+    "source": { "$ref": "#/$defs/endpoint" },
+    "destination": { "$ref": "#/$defs/endpoint" },
+    "network": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "protocol": { "type": "string", "pattern": "^[a-z0-9_-]+$" },
+        "transport": { "enum": ["tcp", "udp", "icmp", "other"] },
+        "bytes": { "type": "integer", "minimum": 0 },
+        "packets": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "user": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": { "name": { "type": "string" }, "role": { "type": "string" } }
+    },
+    "http": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "request": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "method": { "enum": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"] }
+          }
+        },
+        "response": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "status_code": { "type": "integer", "minimum": 100, "maximum": 599 },
+            "latency_ms": { "type": "number", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "url": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": { "path": { "type": "string" } }
+    },
+    "modbus": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "function_code": { "type": "integer", "minimum": 1, "maximum": 255 },
+        "unit_id": { "type": "integer", "minimum": 0, "maximum": 255 },
+        "address": { "type": "integer", "minimum": 0, "maximum": 65535 }
+      }
+    },
+    "mqtt": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "topic": { "type": "string" },
+        "client_id": { "type": "string" },
+        "qos": { "enum": [0, 1, 2] }
+      }
+    },
+    "metric": {
+      "type": "object",
+      "required": ["name", "value"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "value": { "type": "number" },
+        "unit": { "type": "string" }
+      }
+    },
+    "ml": {
+      "type": "object",
+      "required": ["model", "score", "threshold"],
+      "additionalProperties": false,
+      "properties": {
+        "model": { "type": "string" },
+        "score": { "type": "number" },
+        "threshold": { "type": "number" },
+        "window_start": { "$ref": "#/$defs/timestamp" },
+        "window_end": { "$ref": "#/$defs/timestamp" },
+        "top_features": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "message": { "type": "string" },
+    "tags": { "type": "array", "items": { "type": "string" } }
+  },
+  "$defs": {
+    "timestamp": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?Z$"
+    },
+    "endpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ip": { "type": "string", "format": "ipv4" },
+        "port": { "type": "integer", "minimum": 0, "maximum": 65535 },
+        "mac": { "type": "string", "pattern": "^([0-9a-f]{2}:){5}[0-9a-f]{2}$" }
+      }
+    }
+  }
+}

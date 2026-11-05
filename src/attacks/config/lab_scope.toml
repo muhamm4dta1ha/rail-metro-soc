@@ -1,0 +1,6 @@
+# Scope for ALL attack-scenario runs (hard constraints HC-02, HC-03, HC-18).
+# This file may NARROW the lab scope but can never widen it beyond 10.60.0.0/16 (checked in code).
+allowed_cidrs = ["10.60.0.0/16"]
+max_rate_per_s = 50          # hard cap on the request/packet rate any scenario may ask for
+max_duration_s = 300         # hard cap on a single run
+kill_switch_file = ".kill_attacks"   # create this file to abort a running scenario

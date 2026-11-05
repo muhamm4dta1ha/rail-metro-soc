@@ -1,0 +1,73 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rail-metro-soc"
+version = "0.1.0"
+description = "SOC for Railway and Metro Systems: simulation, attack generation, Wireshark/SIEM detection and an ML detector (lab-only, synthetic data)."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["jsonschema>=4.20"]
+
+[project.optional-dependencies]
+# Module 4 (ML) needs the scientific stack; the other modules do not.
+ml = ["numpy>=1.26", "pandas>=2.1", "scikit-learn>=1.4", "joblib>=1.3"]
+dev = ["pytest>=8.0", "ruff>=0.6", "pyyaml>=6.0"]
+
+# One distribution, five importable packages. Each module owns its own folder.
+[tool.setuptools]
+packages = [
+    "railsoc_common",
+    "railsoc_common.schemas",
+    "railsoc_sim",
+    "railsoc_attacks",
+    "railsoc_attacks.scenarios",
+    "railsoc_detection",
+    "railsoc_ml",
+]
+
+[tool.setuptools.package-dir]
+railsoc_common = "src/common/railsoc_common"
+railsoc_sim = "src/simulation/railsoc_sim"
+railsoc_attacks = "src/attacks/railsoc_attacks"
+railsoc_detection = "src/detection/railsoc_detection"
+railsoc_ml = "src/ml/railsoc_ml"
+
+[tool.setuptools.package-data]
+"railsoc_common.schemas" = ["*.json"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra --import-mode=importlib -m 'not docker'"
+testpaths = [
+    "src/common/tests",
+    "src/simulation/tests",
+    "src/attacks/tests",
+    "src/detection/tests",
+    "src/ml/tests",
+    "tests",
+]
+# Lets tests run straight from a clone, even before `pip install -e .`
+pythonpath = ["src/common", "src/simulation", "src/attacks", "src/detection", "src/ml", "scripts"]
+markers = [
+    "docker: needs a running Docker daemon; run explicitly with `pytest -m docker`",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["lab/data", "lab/evidence"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = [
+    "railsoc_common",
+    "railsoc_sim",
+    "railsoc_attacks",
+    "railsoc_detection",
+    "railsoc_ml",
+]

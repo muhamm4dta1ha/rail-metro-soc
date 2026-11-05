@@ -1,0 +1,18 @@
+# CODEOWNERS - GitHub asks the listed people to review changes to matching paths.
+# Fill in the real GitHub usernames (replace the <...> placeholders), then uncomment the lines
+# and keep the '@' in front of each username. Until then this file only documents the review ring.
+#
+# Review ring (module owner <- reviewer):
+#   Talha (src/simulation) <- Roshni      Furqan (src/attacks)  <- Talha
+#   Roshni (src/detection)  <- Anum       Anum (src/ml)      <- Furqan
+#
+# /src/simulation/   @<roshni-username>
+# /src/attacks/      @<talha-username>
+# /src/detection/    @<anum-username>
+# /src/ml/           @<furqan-username>
+#
+# Contract and process files need two of the four (owner + one consumer):
+# /src/common/       @<talha-username> @<furqan-username> @<roshni-username> @<anum-username>
+# /docs/contracts/   @<talha-username> @<furqan-username> @<roshni-username> @<anum-username>
+# /plan/             @<talha-username> @<furqan-username> @<roshni-username> @<anum-username>
+# /.github/          @<talha-username>

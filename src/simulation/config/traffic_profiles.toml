@@ -1,0 +1,45 @@
+# Normal-traffic profiles for the simulated metro/rail environment (all synthetic).
+# The schedule picks a profile from the UTC hour of the *simulated* clock; the generator is seeded,
+# so the same seed always produces the same "day". Module 1 extends this file (task M1-08).
+default_profile = "offpeak"
+
+[profiles.peak]
+telemetry_poll_s = 10
+pis_requests_per_min = 24
+admin_logins_per_hour = 6
+typo_failure_rate = 0.03
+maintenance_writes_per_hour = 0
+ssh_sessions_per_hour = 0
+
+[profiles.offpeak]
+telemetry_poll_s = 15
+pis_requests_per_min = 8
+admin_logins_per_hour = 3
+typo_failure_rate = 0.03
+maintenance_writes_per_hour = 0
+ssh_sessions_per_hour = 0
+
+# Authorised night-time maintenance: engineering workstation writes registers over Modbus and logs
+# in to the jump host. These are BENIGN look-alikes that detectors must not flag.
+[profiles.night_maintenance]
+telemetry_poll_s = 20
+pis_requests_per_min = 1
+admin_logins_per_hour = 1
+typo_failure_rate = 0.05
+maintenance_writes_per_hour = 4
+ssh_sessions_per_hour = 3
+
+[[schedule]]
+start_hour = 7.0
+end_hour = 9.5
+profile = "peak"
+
+[[schedule]]
+start_hour = 16.5
+end_hour = 19.0
+profile = "peak"
+
+[[schedule]]
+start_hour = 1.0
+end_hour = 4.0
+profile = "night_maintenance"

@@ -1,0 +1,124 @@
+# =============================================================================
+# rail-metro-soc - .gitignore (repo root)
+# Rule of thumb: git holds source, tests, docs, small samples and configs.
+# Generated data, captures, models, secrets, caches and personal files stay out (HC-20).
+# =============================================================================
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+.eggs/
+build/
+dist/
+pip-wheel-metadata/
+pip-log.txt
+.venv/
+venv/
+env/
+ENV/
+
+# ---- Test / lint / type-check caches ----
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.hypothesis/
+.tox/
+.nox/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# ---- Notebooks ----
+.ipynb_checkpoints/
+
+# ---- Secrets and local config (HC-20): never commit these ----
+.env
+.env.*
+!.env.example
+*.env
+*.pem
+*.key
+*.p12
+*.pfx
+*.kdbx
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+secrets/
+*.secret
+*.secrets
+credentials.json
+
+# ---- Lab data, captures, models and other big artifacts (HC-20) ----
+# lab/data/ holds generated datasets. Keep only SMALL samples (<= 5 MB each) in lab/evidence/samples/.
+# Anything bigger lives outside git; list it with checksums in lab/evidence/EXTERNAL_FILES.md.
+lab/data/*
+!lab/data/README.md
+!lab/data/.gitkeep
+*.pcap
+*.pcapng
+*.cap
+*.pcap.gz
+!lab/evidence/samples/*.pcap
+!lab/evidence/samples/*.pcapng
+lab/evidence/runs/dry_runs/
+*.parquet
+*.feather
+*.h5
+*.hdf5
+*.npy
+*.npz
+*.pkl
+*.pickle
+*.joblib
+*.onnx
+*.pt
+*.pth
+*.ckpt
+src/ml/models/*
+!src/ml/models/.gitkeep
+!src/ml/models/README.md
+*.sqlite
+*.sqlite3
+*.db
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+*.rar
+
+# ---- Docker / SIEM runtime ----
+src/simulation/volumes/
+docker-compose.override.yml
+src/detection/siem/deploy/wazuh-docker/
+
+# ---- Safety kill-switch file created during attack runs ----
+.kill_attacks
+
+# ---- Editors / OS / temp ----
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.tmp
+*.bak
+.DS_Store
+Thumbs.db
+desktop.ini
+~$*
+
+# ---- Personal / AI-assistant files (never pushed) ----
+# The private session-memory folder lives OUTSIDE this repo (soc/context/); these lines are a safety net.
+/context/
+/brief/
+.claude/
+CLAUDE.md
+CLAUDE.local.md
