@@ -59,7 +59,7 @@ jobs:
       matrix:
         include:
           - { name: common, lint: src/common, tests: src/common/tests, extras: dev }
-          - { name: simulation, lint: src/simulation, tests: src/simulation/tests, extras: dev }
+          - { name: simulation, lint: src/simulation, tests: src/simulation/tests, extras: "dev,sim" }
           - { name: attacks, lint: src/attacks, tests: src/attacks/tests, extras: dev }
           - { name: detection, lint: src/detection, tests: src/detection/tests, extras: dev }
           - { name: ml, lint: src/ml, tests: src/ml/tests, extras: "dev,ml" }

@@ -42,7 +42,7 @@ Generated data goes under `lab/data/` (git-ignored). The other three can develop
 ## Rules for this module (hard constraints, see plan/PLAN.md section 2)
 
 - Everything is **synthetic and lab-only**. Never connect to operational signaling, real railway/utility networks or the internet (HC-02, HC-03).
-- Station "controllers" are **monitoring-class, non-safety** devices (temperature, power feeder, lift status). Points, signals, interlocking and train protection are **not** simulated and **not** attacked.
+- Station "controllers" are **monitoring-class, non-safety** devices (temperature, power feeder, lift status, HVAC, and - per the 2026-11-06 HC-22 amendment - illustrative track-*occupancy* booleans for the mimic panel only). Real interlocking, signalling logic, movement authority and train protection are **not** simulated and **not** attacked.
 - Lab networks stay `internal: true` and inside `10.60.0.0/16`; published ports bind to `127.0.0.1` only (HC-18).
 - Every event validates against `docs/contracts/event_schema.md`; labels never go into events (HC-19).
 - No secrets in git: copy `src/simulation/.env.example` to `src/simulation/.env` locally (HC-20).

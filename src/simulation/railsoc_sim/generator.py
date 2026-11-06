@@ -16,18 +16,10 @@ from typing import Any
 from railsoc_common.events import as_utc, make_event
 from railsoc_sim.assets import Asset, by_type, first_of_type, load_assets
 from railsoc_sim.profiles import Schedule, load_schedule
+from railsoc_sim.protocol_map import METRICS, MODBUS_PORT, SETPOINT_REGISTER
 
-# name, unit, nominal, spread, holding-register address (synthetic, non-safety telemetry only)
-METRICS = (
-    ("station_temp_c", "C", 22.0, 2.0, 0),
-    ("feeder_voltage_v", "V", 750.0, 12.0, 1),
-    ("platform_occupancy_pct", "%", 35.0, 20.0, 2),
-    ("lift_available", "bool", 1.0, 0.0, 3),
-)
 USERS = (("ops_admin", "admin"), ("ops_lead", "admin"), ("eng_maint", "engineer"))
 PIS_PORT = 8080
-MODBUS_PORT = 502
-SETPOINT_REGISTER = 10
 
 
 def _asset(asset: Asset) -> dict[str, str]:
