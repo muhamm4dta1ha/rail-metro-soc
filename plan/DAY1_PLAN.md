@@ -25,8 +25,9 @@ You build the thing everyone else needs. Order matters: HTTP first (cheapest), t
 4. **(90 min) Real SSH.** Run an actual SSH server in the jump-host container (`openssh-server`, a fixed test keypair or password - synthetic, not a real password you use anywhere). A driver using `paramiko` really connects (and sometimes fails on purpose) on an interval; log `auth.ssh` success/failure from the driver's own connect result.
 5. **(30 min) Capture.** On the gateway container, run `tcpdump`/`tshark` for the whole session, rotate every ~10 min, save under `lab/data/raw/` (git-ignored). Confirm in Wireshark: HTTP, Modbus and SSH frames are all present.
 6. **(20 min) Orchestrate.** One script, `railsoc_sim/scripts/run_normal_day.py`, starts the drivers together for a fixed window (e.g. 20-30 min compressed) so Furqan/Roshni/Anum have one command to get a block of real normal traffic + matching logs.
-7. **Hand off at Checkpoint 1:** tell Furqan the real ports/endpoints to target; tell Roshni where the pcap and logs land; tell Anum where the JSONL logs are.
-8. **(remaining time) Architecture + protocol notes.** A short `docs/architecture/architecture.md` (the zones you actually used) and a short `docs/protocols/protocol_stack.md` (HTTP/Modbus/SSH: port, what normal looks like, what an anomaly looks like) - two pages, not twelve.
+7. **(30 min) Operations dashboard (added 2026-11-06).** `fuxa` (a real open-source SCADA/HMI, see `docker-compose.yml`) polling `station-plc` over genuine Modbus/TCP - a live view of the station's own telemetry, separate from Roshni's Wazuh *security* dashboard. Add one or two gauges/trends over the four registers; no custom code needed, it's third-party software you configure through its own web UI.
+8. **Hand off at Checkpoint 1:** tell Furqan the real ports/endpoints to target; tell Roshni where the pcap and logs land; tell Anum where the JSONL logs are.
+9. **(remaining time) Architecture + protocol notes.** A short `docs/architecture/architecture.md` (the zones you actually used) and a short `docs/protocols/protocol_stack.md` (HTTP/Modbus/SSH: port, what normal looks like, what an anomaly looks like) - two pages, not twelve.
 
 **Stretch only if time remains:** MQTT (paho-mqtt client + mosquitto, already in compose), traffic-profile time-of-day shaping, `reset_lab` polish.
 

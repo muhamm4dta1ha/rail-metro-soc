@@ -75,6 +75,102 @@ services:
       dmz_ops:
         ipv4_address: 10.60.20.10
 
+  # Real Modbus/TCP PLC (HC-23): a genuine pymodbus TCP server (railsoc_sim.services.station_plc),
+  # not a hand-waved stub - real function-code 3/6 handling, a real background "sensor input"
+  # loop. OpenPLC (a real third-party PLC runtime) was today's first choice for extra
+  # authenticity, but compiling it from source took too long for a one-day lab; see
+  # docs/architecture/architecture.md for the full reasoning. Today's live stand-in for ST01-CTL;
+  # see plan/DAY1_PLAN.md and PLC-01 in config/assets.csv.
+  station-plc:
+    build:
+      context: ../..
+      dockerfile: src/simulation/services/station_sim/Dockerfile
+    hostname: station-plc
+    networks:
+      dmz_ops:
+        ipv4_address: 10.60.20.22
+
+  # Real sshd (HC-23): a genuine, well-known open-source image, not a hand-rolled stub.
+  jumphost:
+    image: lscr.io/linuxserver/openssh-server:latest
+    hostname: jumphost-01
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      TZ: "Etc/UTC"
+      PASSWORD_ACCESS: "true"
+      USER_NAME: "eng_maint"
+      USER_PASSWORD: ${JUMPHOST_PASSWORD:-}
+    networks:
+      dmz_ops:
+        ipv4_address: 10.60.20.30
+
+  # Real client drivers (HC-23): genuine HTTP/Modbus/SSH traffic against pis/station-plc/jumphost.
+  # Today's unified stand-in for OCC-01's poller role and WS-03's maintenance-write/SSH role.
+  occ:
+    build:
+      context: ../..
+      dockerfile: src/simulation/services/drivers/Dockerfile
+    hostname: occ-scada-01
+    depends_on: [pis, station-plc, jumphost]
+    environment:
+      PIS_USERS: ${PIS_USERS:-}
+      JUMPHOST_PASSWORD: ${JUMPHOST_PASSWORD:-}
+    volumes:
+      - ../../lab/data/raw:/lab/data/raw
+    command:
+      [
+        "python",
+        "-m",
+        "railsoc_sim.scripts.run_normal_day",
+        "--duration",
+        "${NORMAL_DAY_DURATION:-1800}",
+        "--out-dir",
+        "/lab/data/raw",
+      ]
+    networks:
+      dmz_ops:
+        ipv4_address: 10.60.20.20
+
+  # Every real packet the occ driver sends/receives (HTTP to pis, Modbus to station-plc, SSH to
+  # jumphost) crosses this one interface, so one capture point here is enough for today's lab
+  # (M1-09 full gateway-based capture is backlog - see plan/DAY1_PLAN.md).
+  occ-capture:
+    image: nicolaka/netshoot:latest
+    network_mode: "service:occ"
+    depends_on: [occ]
+    cap_add: [NET_ADMIN, NET_RAW]
+    volumes:
+      - ../../lab/data/raw/pcap:/pcap
+    command: ["tcpdump", "-i", "eth0", "-w", "/pcap/occ-%Y%m%d-%H%M%S.pcap", "-G", "600"]
+
+  # Open-source SCADA/HMI dashboard (FUXA), reading real-time Modbus/TCP data from station-plc.
+  #
+  # NOTE: on Docker Desktop for Windows, a published port on an `internal: true` network (every
+  # lab zone, per HC-18) does not actually forward - a Docker Desktop/Windows limitation, not
+  # something wrong with this file (confirmed with a plain nginx container on this same network).
+  # `ports:` is kept below because it is correct and harmless, and becomes real on a Linux Docker
+  # host. On Windows, reach the dashboard with a temporary relay instead (not part of this repo -
+  # a lab network stays internal for everyone else):
+  #   docker run -d --name fuxa-relay -p 127.0.0.1:1881:1881 alpine/socat tcp-listen:1881,fork,reuseaddr tcp-connect:fuxa:1881
+  #   docker network connect rail-metro-soc_dmz_ops fuxa-relay
+  # See docs/architecture/architecture.md - this will hit Roshni too, for Wazuh's dashboard.
+  fuxa:
+    build:
+      context: ../..
+      dockerfile: src/simulation/services/fuxa/Dockerfile
+    hostname: fuxa
+    depends_on: [station-plc]
+    ports:
+      - "127.0.0.1:1881:1881"
+    volumes:
+      - fuxa-appdata:/usr/src/app/FUXA/server/_appdata
+      - fuxa-db:/usr/src/app/FUXA/server/_db
+      - fuxa-logs:/usr/src/app/FUXA/server/_logs
+    networks:
+      dmz_ops:
+        ipv4_address: 10.60.20.23
+
   # Module 2 starts this explicitly:  docker compose --profile attacks up -d attacker
   attacker:
     profiles: ["attacks"]
@@ -85,3 +181,8 @@ services:
     networks:
       attacker_lab:
         ipv4_address: 10.60.66.10
+
+volumes:
+  fuxa-appdata:
+  fuxa-db:
+  fuxa-logs:
