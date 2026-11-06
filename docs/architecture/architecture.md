@@ -9,10 +9,10 @@ honest, scoped-down version that is actually live in `docker-compose.yml` today.
 | Layer | Today | Backlog |
 |---|---|---|
 | HTTP (PIS) | Real `http.server`-based server + real `requests` client traffic | time-of-day shaping, MQTT display feed |
-| Modbus/TCP (station controller) | Real `pymodbus`-based server (see below) + real `pymodbus` client | 4 separate controllers across `station_field`, point/signal/interlocking equipment (never simulated at all - HC-22) |
+| Modbus/TCP (station controller) | Real `pymodbus`-based server modelling traction power, HVAC and track-circuit occupancy (see below) + real `pymodbus` client | 4 separate controllers across `station_field`, real interlocking/signalling equipment (never simulated at all - HC-22) |
 | SSH (jump host) | Real `openssh-server` + real `paramiko` client | key-based auth, parsing the real sshd log instead of the driver's own result |
 | Inter-zone routing (gateway) | Placeholder only (M1-03/M1-09) | a real router container forwarding between all 5 zones |
-| Railway signalling, CBTC, GSM-R/FRMCS | **Never simulated or attacked** (HC-01, HC-02, HC-22) | described only, see `docs/protocols/protocol_stack.md` |
+| Railway signalling, CBTC, GSM-R/FRMCS, train protection | **Never simulated or attacked** (HC-01, HC-02, HC-22) | described only, see `docs/protocols/protocol_stack.md` |
 
 ## Today's topology (one zone, on purpose)
 
@@ -66,7 +66,28 @@ is pushed or faked by our own code - FUXA reads the same registers any real Modb
 
 **Known gap - FUXA's own "Home" page.** FUXA 1.3.5's Home screen (the page you land on at `/`) has a real front-end bug - its side-nav drawer opens with zero width and the page stays blank, reproducible in a clean browser, not specific to this setup. It does not affect the dashboard itself: open `/view?name=MainView` directly for the live runtime view (real, continuously-updating data - confirmed by watching values change between page loads), or `/editor` to edit it (renders correctly).
 
-**The dashboard itself.** `MainView` (in the project saved to FUXA's `fuxa-appdata`/`fuxa-db` volumes) has one `Value` widget per register (`station_temp_c`, `feeder_voltage_v`, `platform_occupancy_pct`, `lift_available`, `maintenance_setpoint`), each bound to its device tag via `property.variableId`, with a `divisor` on each tag (`100`, `10`, `100`, `1`, `1`) so FUXA shows the real engineering value, not the raw 16-bit register word. Login for the editor: `admin` / `123456` (FUXA's own built-in default - change it under Users once this moves past a one-day lab).
+**The dashboard itself: a mimic panel, not a list of numbers.** `MainView` groups the PLC's points
+into the sections a real metro OT mimic panel would have - **Traction Power** (two feeder
+breakers, each with voltage/current), **Ventilation/HVAC** (two zones, fan state/speed/temp), a
+**Station** panel (the original four points), and a **Track - Line 1** diagram with two station
+boxes and six track-circuit segments. A breaker/fan's state is two overlapping coloured circles
+(green/red) that FUXA shows or hides via its own `property.actions` (`show`/`hide` with a value
+range) bound to the boolean tag - there is no dedicated "lamp" widget in this FUXA build, so every
+coloured indicator and the train icon reuse the plain `Value` widget type, just with an empty/tiny
+text child so nothing numeric is visible. The **train** is the same trick repeated six times: one
+icon per track circuit, each shown only while its circuit's `..._occupied` tag is `1` - as
+`railsoc_sim.services.station_plc`'s `train_forever()` thread shuttles that flag from circuit to
+circuit, exactly one icon is visible at a time, giving the appearance of one train moving along
+the line. **HC-22 (amended 2026-11-06):** every track-circuit tag is illustrative, monitoring-class
+telemetry only - nothing here computes or enforces anything, and none of it is a valid attack
+target; see `plan/PLAN.md`.
+
+Every tag has a `divisor` (`100` for `_c`/`_pct` points, `10` for currents/voltages, `1` for
+booleans) so FUXA shows the real engineering value, not the raw 16-bit register word. Login for
+the editor: `admin` / `123456` (FUXA's own built-in default - change it under Users once this
+moves past a one-day lab). **This whole project (device, 22 tags, the view) is reproducible with
+one command** - `python -m railsoc_sim.scripts.fuxa_setup` - instead of the one-off browser-console
+session that first built it; see `docs/M1_SUMMARY.md`.
 
 The previous starter generator (`railsoc_sim/generator.py`) is kept, but only for its original,
 honest purpose: producing bulk *synthetic* training data for Anum's ML pipeline quickly. It is

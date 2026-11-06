@@ -23,7 +23,7 @@ from pymodbus.client import ModbusTcpClient
 
 from railsoc_common.events import dumps, make_event
 from railsoc_sim.assets import Asset, load_assets
-from railsoc_sim.protocol_map import METRICS, MODBUS_PORT, SETPOINT_REGISTER, decode_register
+from railsoc_sim.protocol_map import ALL_POINTS, MODBUS_PORT, SETPOINT_REGISTER, decode_register
 
 LOGGER = logging.getLogger("railsoc_sim.drivers.modbus_driver")
 
@@ -55,9 +55,9 @@ def poll_once(
     *,
     controller_port: int = 502,
 ) -> bool:
-    """Read every METRICS register once, for real. Returns True iff every read succeeded."""
+    """Read every monitoring point once, for real. Returns True iff every read succeeded."""
     ok_all = True
-    for name, unit, _nominal, _spread, address in METRICS:
+    for name, unit, _nominal, _spread, address in ALL_POINTS:
         response = client.read_holding_registers(address=address, count=1, device_id=unit_id)
         failed = response.isError()
         ok_all = ok_all and not failed
@@ -143,7 +143,7 @@ def run(
         calls = 0
         while now() < deadline:
             poll_once(client, unit_id, poller, controller, rng, out, controller_port=port)
-            calls += len(METRICS)
+            calls += len(ALL_POINTS)
             if now() >= next_write:
                 maintenance_write_once(
                     client, unit_id, writer, controller, rng, out, controller_port=port

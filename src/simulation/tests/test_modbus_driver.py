@@ -18,7 +18,7 @@ from pymodbus.simulator import DataType, SimData, SimDevice
 from railsoc_common.events import validate_event
 from railsoc_sim.assets import Asset
 from railsoc_sim.drivers import modbus_driver
-from railsoc_sim.protocol_map import SETPOINT_REGISTER, encode_register
+from railsoc_sim.protocol_map import ALL_POINTS, SETPOINT_REGISTER, encode_register
 
 POLLER = Asset("OCC-01", "occ-scada-01", "dmz_ops", "scada_master", "10.60.20.20", ("modbus",))
 
@@ -31,18 +31,13 @@ def _free_port() -> int:
 
 @pytest.fixture()
 def real_plc():
-    """A real pymodbus TCP server holding the four METRICS registers plus the setpoint."""
+    """A real pymodbus TCP server holding every monitoring point plus the setpoint."""
     port = _free_port()
     controller = Asset("PLC-01", "station-plc", "dmz_ops", "station_controller", "127.0.0.1", ("modbus",))
     sim_values = [
-        SimData(address=0, count=1, values=encode_register("station_temp_c", 22.5), datatype=DataType.REGISTERS),
-        SimData(address=1, count=1, values=encode_register("feeder_voltage_v", 751.2), datatype=DataType.REGISTERS),
-        SimData(
-            address=2, count=1, values=encode_register("platform_occupancy_pct", 40.0), datatype=DataType.REGISTERS
-        ),
-        SimData(address=3, count=1, values=encode_register("lift_available", 1), datatype=DataType.REGISTERS),
-        SimData(address=SETPOINT_REGISTER, count=1, values=0, datatype=DataType.REGISTERS),
-    ]
+        SimData(address=address, count=1, values=encode_register(name, nominal), datatype=DataType.REGISTERS)
+        for name, _unit, nominal, _spread, address in ALL_POINTS
+    ] + [SimData(address=SETPOINT_REGISTER, count=1, values=0, datatype=DataType.REGISTERS)]
     device = SimDevice(id=1, simdata=sim_values)
     thread = threading.Thread(
         target=StartTcpServer, args=(device,), kwargs={"address": ("127.0.0.1", port)}, daemon=True
@@ -65,7 +60,7 @@ def test_poll_once_reads_real_registers_and_logs_matching_events(real_plc):
     finally:
         client.close()
     assert ok
-    assert len(events) == 4
+    assert len(events) == len(ALL_POINTS)
     parsed = [json.loads(line) for line in events]
     for event in parsed:
         validate_event(event)
@@ -73,7 +68,7 @@ def test_poll_once_reads_real_registers_and_logs_matching_events(real_plc):
         assert event["event"]["outcome"] == "success"
         assert event["modbus"]["function_code"] == 3
     temp = next(e for e in parsed if e["metric"]["name"] == "station_temp_c")
-    assert temp["metric"]["value"] == pytest.approx(22.5)
+    assert temp["metric"]["value"] == pytest.approx(22.0)
 
 
 def test_maintenance_write_once_really_changes_the_register(real_plc):

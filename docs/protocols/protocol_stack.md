@@ -22,7 +22,7 @@ simulated** stays as in the original starter table below.
 | Port | TCP 502 (`station-plc`, 10.60.20.22) |
 | Real client | `railsoc_sim.drivers.modbus_driver` (`pymodbus`), running inside `occ` |
 | Real server | `railsoc_sim.services.station_plc` (`station-plc`) - a real pymodbus TCP server we wrote, monitoring-only registers (HC-22: no points/signals/interlocking); OpenPLC was today's first choice but took too long to compile, see docs/architecture/architecture.md |
-| Register map | `railsoc_sim/protocol_map.py` - holding registers 0-3 (temperature, feeder voltage, platform occupancy, lift status), register 10 (maintenance setpoint, writable) |
+| Register map | `railsoc_sim/protocol_map.py` - registers 0-3 (station: temperature, feeder 1 voltage, platform occupancy, lift status), 4-8 (traction power: two feeder breakers + currents/voltage), 9/11-15 (ventilation: two HVAC zones, fan state/speed/temp), 16-21 (six track-circuit occupancy flags, illustrative only - HC-22 amendment), register 10 (maintenance setpoint, writable) |
 | Encoding | registers are unsigned 16-bit words; `encode_register`/`decode_register` apply a fixed scale per metric (e.g. `x100` for `station_temp_c`) since Modbus has no native float |
 | Normal | function code 3 (read) on a fixed interval; occasional function code 6 (write) to the setpoint register - an "authorised maintenance" look-alike |
 | Anomaly | writes from a source that never does maintenance (Furqan's scenario B, deliberately not in `assets.csv`) |
