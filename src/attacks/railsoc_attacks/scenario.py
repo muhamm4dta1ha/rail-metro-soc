@@ -25,6 +25,8 @@ class RunContext:
     params: dict[str, Any]
     dry_run: bool
     actions: list[str] = field(default_factory=list)
+    events: list[dict[str, Any]] = field(default_factory=list)
+    measurements: list[dict[str, Any]] = field(default_factory=list)
 
     def guard(self, target_ip: str) -> None:
         """MUST be called before sending ANY traffic to `target_ip` (and inside long loops)."""

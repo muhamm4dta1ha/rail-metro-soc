@@ -1,51 +1,33 @@
-# Scenario A - Unauthorized administrative access
+# Scenario A — Unauthorized Administrative Access
 
-Status: **starter** (objective + expected indicators). Procedure and runner: task M2-04 - Owner: Furqan - Reviewer: Talha (Roshni checks the indicators)
+## Objective and scope
+Demonstrate repeated failed authentication followed by a valid login from the same lab source.
+Only PIS `10.60.20.10:8080/api/login` is implemented. No SSH guessing or configuration change.
 
-## Objective
-Show how unauthorized administrative access to the simulated passenger-information admin portal / maintenance jump host looks to a SOC: from repeated failed logins to a successful login and an out-of-policy administrative action. Brief category: *unauthorized administrative access*.
+## Procedure
+Run `src/attacks/scripts/run_lab.ps1 -RoeApproved -Campaign -Scenarios A` after all four RoE
+approvals and with the existing services running. This verifies isolated DMZ membership, uses
+`10.60.20.99` for the test, and compares with OCC `10.60.20.20`.
+The individual test sends five requests for an invalid synthetic account then one login for
+the existing synthetic PIS account. Credentials are read from environment, never parameters.
+The campaign varies rate 2–6/s and duration 4–5s; an individual run lasts 6s. Every comparison
+has the same configured duration, but only one normal successful login.
 
-## Scope & safety
-- Target: simulated PIS (`PIS-01`, 10.60.20.10) and jump host (`JH-01`) only. Attacker: `ATK-01` (10.60.66.10) inside the isolated lab.
-- Synthetic accounts only (from `src/simulation/.env`). Caps from `config/lab_scope.toml`; kill switch tested before the first live run.
-- Must comply with [RULES_OF_ENGAGEMENT.md](../RULES_OF_ENGAGEMENT.md).
+## Expected and observed indicators
+The completed campaign produced 11 attack runs: 55 HTTP 401 responses and 11 HTTP 200 responses.
+Each of 11 baselines had one successful scripted login. The packet export independently shows
+those attack response codes. Success means the preconfigured synthetic account worked; it does
+not demonstrate password discovery, privilege escalation or administrative modification.
 
-## ATT&CK mapping (verify ids on attack.mitre.org)
-T1110 Brute Force; T1078 Valid Accounts (the attacker ends up with a valid lab account).
+## Evidence and packet analysis
+See `lab/evidence/runs/M2-20261108T050042Z/`: `A-attack.pcap`, `A-baseline.pcap`,
+`A-packet-observations.tsv`, execution transcripts and per-run `events.jsonl`/`manifest.json`.
+Use `http.response.code == 401 && ip.dst == 10.60.20.99` or
+`http.response.code == 200 && ip.dst == 10.60.20.99`. Use frame time bounds from the manifest.
+Server-response-only captures exclude credential-bearing requests. Use actual PIS server logs
+for usernames and endpoint correlation; client logs are clearly named `pis.client`.
 
-## Preconditions
-Lab up with the normal traffic profile (M1-03/04/06), SIEM ingesting the PIS and jump-host logs (M3-02), baseline window recorded (M2-07).
-
-## Procedure (reproducible)
-TO WRITE (M2-04): steps, tools + pinned versions, parameters (rate, duration, source, start offset), start/stop commands, clean-up.
-
-## Expected indicators (by layer)
-| Layer | What should be visible |
-|---|---|
-| Network (Wireshark) | Many short HTTP/SSH sessions from `ATK-01` to `PIS-01` / `JH-01`; a burst of `http.response.code == 401`; then one success followed by administrative requests |
-| Host / app logs | `pis.app` login failures sharing one `source.ip`; a later login success; an admin/config action by that session; `auth.ssh` failures on the jump host |
-| SIEM | Failure-burst rule (frequency over a short timeframe), success-after-failures correlation, admin action outside the maintenance window |
-| ML features | `n_failures`, `failure_ratio`, `n_new_source`, `n_events` for the attacker's source in each window |
-
-## Expected events (contract datasets)
-`pis.app` (authentication/login failures then success, configuration events), `auth.ssh`, `gw.firewall` allow/deny entries.
-
-## Evidence collected (per run - automated by the recorder)
-`manifest.json`, pcap slice from the gateway, `pis.app` / `auth.ssh` log slices, Wazuh alert export, Wireshark and dashboard screenshots under `lab/evidence/runs/<run_id>/`.
-
-## Baseline for comparison (M2-07)
-Same duration and traffic profile without the attack. It contains benign look-alikes: occasional typo failures by normal staff and night-window maintenance logins.
-
-## Mitigation recommendations (input to M2-12 and the report)
-- Prevent: MFA for administrators, account lockout / rate limiting, source allow-listing for admin interfaces, separate admin plane.
-- Detect: failure-burst rule, success-after-failure correlation, new-source alert.
-- Respond: block the source, force credential reset, review configuration changes made by the session.
-
-## Status checklist
-- [ ] procedure written
-- [ ] runner implemented (guarded by `ctx.guard`)
-- [ ] indicators confirmed in pcap and logs
-- [ ] baseline captured
-- [ ] Module 3 detects it
-- [ ] Module 4 features cover it
-- [ ] reviewed by the ring reviewer
+## Detection and mitigation
+Correlate repeated login failures followed by success from a new source. Restrict administrative
+sources, rate-limit authentication and use stronger authentication. Do not treat ordinary single
+login mistakes as attacks. Roshni must validate the Wazuh rules against the real server logs.

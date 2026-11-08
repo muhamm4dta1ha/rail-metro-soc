@@ -1,50 +1,36 @@
-# Scenario B - Anomalous communications from a rogue device
+# Scenario B — Rogue Device Communication
 
-Status: **starter** (objective + expected indicators). Procedure and runner: task M2-05 - Owner: Furqan - Reviewer: Talha (Roshni checks the indicators)
+## Objective and scope
+Demonstrate unexpected Modbus communication from a source absent from the inventory. The real
+PLC is `PLC-01`, `10.60.20.22:502`; MQTT exists at `10.60.20.11:1883` but is not used by this runner.
+Only function 3 reads of original monitoring registers 0–3 are issued. No output, setpoint,
+track-occupancy register, write function or safety-control function is targeted.
 
-## Objective
-Show how an unknown device appearing in the station network and talking in ways the baseline never shows looks to a SOC. Brief category: *anomalous communications*.
+## Placement and procedure
+The original `10.60.30.99` station-zone source cannot reach the DMZ because routing is unfinished.
+The laboratory-compatible alternative is a single-interface DMZ client at `10.60.20.99`,
+created on the existing internal network. Existing networks and attacker attachments remain
+unchanged. This is a DMZ rogue-device demonstration, not a station-zone compromise.
 
-## Scope & safety
-- The rogue device is a lab container in the station zone with an address that is **not** in `src/simulation/config/assets.csv` (that is the point). Targets: simulated station *monitoring* controllers and the MQTT display broker only.
-- **No safety-related function** is simulated or touched: no points, signals, interlocking or train protection (RoE rule 5). Caps and kill switch as in the RoE.
+Run `src/attacks/scripts/run_lab.ps1 -RoeApproved -Campaign -Scenarios B`. The script verifies
+isolation and target membership. Clients bind their real IP. The normal client shares OCC's
+namespace at `10.60.20.20`, reads the same points at <=1/s and uses the same duration.
+Attack variants request 2–6 reads/s for 4–5 seconds, six requests maximum; the individual test
+lasts 6s. Calls are sequential, time-limited, guarded and never automatically retried.
 
-## ATT&CK mapping (verify ids on attack.mitre.org)
-T1046 Network Service Discovery; ICS: T0846 Remote System Discovery, T0855 Unauthorized Command Message, T0856 Spoof Reporting Message.
+## Results and evidence
+All 11 attack runs completed with six successful reads each (66 total). Eleven baselines
+produced 51 scripted reads. `lab/evidence/runs/M2-20261108T050042Z/` contains both PCAPs,
+`B-packet-observations.tsv`, transcripts and per-run manifests/logs. The baseline capture also
+contains M1 normal traffic, including its authorised maintenance writes; those are not M2 writes.
 
-## Preconditions
-Lab up with normal telemetry and display traffic (M1-05), gateway capture running (M1-09), asset inventory loaded into the SIEM as the "known assets" list (M3-02).
+Wireshark: `modbus && ip.addr == 10.60.20.99`; requests:
+`modbus.func_code == 3 && ip.src == 10.60.20.99`. The attack capture should contain no functions
+5, 6, 15 or 16. Compare source addresses and request spacing with the baseline capture. No
+source IP spoofing or external routing was used.
 
-## Procedure (reproducible)
-TO WRITE (M2-05): how the rogue container is attached to the station zone, tools + pinned versions, parameters, start/stop, clean-up.
-
-## Expected indicators (by layer)
-| Layer | What should be visible |
-|---|---|
-| Network (Wireshark) | A new source address/MAC in the station zone; many SYNs to many ports/hosts in seconds; Modbus requests with *write* function codes from a non-master; MQTT PUBLISH from an unknown client id |
-| Host / app logs | Gateway `gw.firewall` entries for the new source; controller `scada.command` events from a source other than the engineering workstation; broker publish events from an unknown client |
-| SIEM | New-asset alert (source not in inventory), discovery-pattern correlation, unauthorised-writer rule |
-| ML features | `n_new_source`, `n_unique_dst_ip`, `n_unique_dst_port`, `n_modbus_write`, `n_mqtt_publish` for the rogue source |
-
-## Expected events (contract datasets)
-`gw.firewall`, `scada.command` (configuration/write_register), `mqtt.broker` (publish/connect), `net.flow`.
-
-## Evidence collected (per run - automated by the recorder)
-`manifest.json`, pcap slice, controller/broker/gateway log slices, SIEM alert export, screenshots.
-
-## Baseline for comparison (M2-07)
-Same window without the rogue device. It contains the *authorised* maintenance writes from the engineering workstation (benign look-alike) so that "any write = attack" is not learnable.
-
-## Mitigation recommendations (input to M2-12 and the report)
-- Prevent: port security / 802.1X on station switches, protocol allow-listing at the gateway, authenticated + TLS MQTT, segmentation between displays and controllers.
-- Detect: asset-inventory diffing, discovery-pattern rule, function-code allow-list per source.
-- Respond: isolate the port/host, review controller state, rotate broker credentials.
-
-## Status checklist
-- [ ] procedure written
-- [ ] runner implemented (guarded by `ctx.guard`)
-- [ ] indicators confirmed in pcap and logs
-- [ ] baseline captured
-- [ ] Module 3 detects it
-- [ ] Module 4 features cover it
-- [ ] reviewed by the ring reviewer
+## Detection and mitigation
+Detect an unapproved client accessing the monitoring service, even when requests are reads.
+Use source allow-lists and zone firewall rules; investigate new devices. Frequency alone is
+not sufficient because legitimate OCC polls can be bursty. Update inventory-based detection
+for the actual DMZ placement rather than assuming the original station-zone address.
