@@ -1,45 +1,66 @@
-# Module 4 - ML Threat Detection
 
-**Owner: Anum** (ML Lead) - **Reviewer: Furqan** (reviews every PR that touches this folder) - **Rubric:** extension that feeds criterion 3 (SIEM detection)
-**Plan:** [plan/PLAN.md section 12](../../plan/PLAN.md) - tasks `M4-01` ... `M4-13`
+# Module 4 | ML threat detection
 
-This module detects threats and attacks with machine learning **and works with all three other modules** (HC-12): it learns from what **Talha's** simulation produces, is trained and scored against **Furqan's** ground truth, and its alerts are shown in **Roshni's** SIEM dashboard. This folder is **starter code** that **Anum** extends on `feature/ml/<TASK-ID>-<slug>` branches; **Furqan** reviews each PR.
+**Owner** Anum Ali · **Reviewer** Furqan
 
-## What is here
+Module 4 reads the shared event JSONL and the separate ground-truth CSV, builds per-source UTC windows, trains and evaluates detectors, and writes schema-valid `ml.alert` JSONL. See the [Module 4 report](../../docs/report/ml_module4.md), [design](../../docs/report/ml_design.md), [dataset card](reports/dataset_card.md), [feature catalogue](reports/feature_catalogue.md), [model card](reports/model_card.md) and [results](reports/results.md).
 
-| Path | What | Anum extends it in |
-|---|---|---|
-| `railsoc_ml/features.py` | Events -> per-source time-window features (failures, distinct ports/hosts, 4xx/5xx, Modbus writes, MQTT publishes, new sources) | M4-05 |
-| `railsoc_ml/dataset.py` | Events + ground truth -> labelled windows; **run-grouped / chronological** split (no leakage) | M4-04 |
-| `railsoc_ml/models.py` | `ThresholdBaseline`, `AnomalyDetector` (One-Class SVM by default, Isolation Forest optional; normal-only training), `SupervisedDetector` (random forest) | M4-06 .. M4-08 |
-| `railsoc_ml/evaluate.py` | Precision / recall / F1 / FPR / ROC-AUC / PR-AUC, false alarms per hour | M4-09 |
-| `railsoc_ml/serve.py` | Scores events and emits `ml.alert` contract events (starter: batch; M4-10: streaming) | M4-10 |
-| `railsoc_ml/cli.py`, `configs/default.toml` | `build-dataset`, `train`, `score` commands and defaults | M4-02 |
-| `notebooks/`, `reports/`, `models/` | Exploration, feature catalogue / model card / dataset card, model artifacts (not in git) | M4-03, M4-12 |
+## Windows PowerShell quick start
 
-**Starter finding (re-check on the real campaign data):** on very regular traffic (the starter data has only 3 distinct normal feature vectors) an Isolation Forest cannot extrapolate beyond the training range and scored a 60-failure burst *lower* than normal windows (0.66 vs 0.69); a One-Class SVM on standardised features separated them clearly (1.38 vs 0.0002), so it is the default. Isolation Forest stays available with `--method isolation_forest`.
+Run from the repository root. The generator below is the existing **offline synthetic normal** simulator. Use Talha's lab logs for campaign validation.
 
-## Handoffs - who needs what from Anum
-
-| Anum delivers | To | When |
-|---|---|---|
-| Data needs (volume, benign look-alikes, field requirements) written down early | **Talha** (builds the generator) | Phase 1 |
-| Label-validation feedback (mislabels) and requests for more/varied runs | **Furqan** (owns ground truth and campaigns) | Phases 3-4 |
-| `ml.alert` event format (already in the schema), model output and metrics for the dashboard ML panel | **Roshni** (ingests alerts, builds the panel) | Phases 4-5 |
-
-## Quick start
-
-```bash
-pip install -e ".[dev,ml]"
-python -m railsoc_sim.cli generate --hours 4 --seed 1 --out lab/data/raw/normal_s1.jsonl
-python -m railsoc_ml.cli build-dataset --events lab/data/raw/normal_s1.jsonl --runs lab/ground_truth/attack_runs.csv --assets src/simulation/config/assets.csv --out lab/data/processed/dataset_v1.csv
-python -m railsoc_ml.cli train --dataset lab/data/processed/dataset_v1.csv --out src/ml/models/anomaly.joblib
+```powershell
+python -m venv .venv
+$python = '.\.venv\Scripts\python.exe'
+& $python -m pip install -e '.[dev,ml,sim]'
+& $python -m railsoc_sim.cli generate --start '2026-01-05T00:00:00Z' --hours 12 --seed 1 --out lab/data/raw/normal_s1.jsonl
+& $python -m railsoc_ml.cli build-dataset --events lab/data/raw/normal_s1.jsonl --assets src/simulation/config/assets.csv
+& $python -m railsoc_ml.cli train
+& $python -m railsoc_ml.cli compare
+& $python -m railsoc_ml.cli score --events lab/data/raw/normal_s1.jsonl --stream
+& $python -m pytest src/ml/tests -q
+& $python scripts/check_all.py
 ```
 
-## Rules for this module (hard constraints, see plan/PLAN.md section 2)
+The default inputs, outputs, seeds, window length and thresholds live in [default.toml](configs/default.toml). Pass `--config <file>` before the subcommand to override TOML settings. Per-command flags take precedence. The dataset CSV and matching `.meta.json` stay together. The sidecar records run spans, window length and the asset inventory used during preprocessing. Scoring reuses the artifact's settings. Keep joblib artifacts local and load only artifacts you trust.
 
-- The model must detect the **three required scenarios** and is evaluated on **held-out runs**, never on random rows (HC-12, leakage rule).
-- Only fields from the event schema are features; **never** `message` text and **never** labels (HC-19).
-- ML alerts are ordinary `ml.alert` events so they land in the same SIEM dashboard as rule alerts; evaluate them with `railsoc_detection.evaluate` so rules and ML are scored the same way (HC-12).
-- Synthetic data only; large datasets, models and pcaps stay out of git (HC-03, HC-20).
-- New behaviour needs tests in `src/ml/tests/`; CI must be green before merging into `develop` (HC-14).
+`score` reads the entire input in batch mode. With `--stream`, pass a nondecreasing event-time file. The scorer buffers one time bin, defaults to a 100,000-event limit per bin and emits a window when a later bin arrives or at EOF. An out-of-order input or exceeded limit fails the command. The file is replaced only after successful scoring, so replaying the command to the same path does not append duplicate alerts. The incremental API consumes an iterator. The CLI consumes finite files and has no persistent checkpoint across separate input files. Keep each complete window in one input when handing off successive files. Both modes skip input `ml.alert` events to avoid scoring their own output.
+
+The generated comparison includes a Markdown table, JSON metrics, plots and per-model holdout alerts under `src/ml/reports/generated/`. Datasets and full-log alerts go under `lab/data/`. Models go under `src/ml/models/`. These generated outputs are ignored by Git.
+
+## When the campaign logs arrive
+
+Collect the matching UTC event files and the completed ground-truth CSV from Furqan, with normal logs from the same collection setup and supporting evidence. Confirm timestamps, asset/endpoint mappings and unique run IDs. Pass each distinct event file once, since duplicate log lines alter event counts. Keep campaign paths separate from the offline dry run.
+
+```powershell
+& $python -m railsoc_ml.cli build-dataset --events lab/data/raw/lab_normal.jsonl --events lab/data/raw/campaign.jsonl --runs lab/ground_truth/attack_runs.csv --assets src/simulation/config/assets.csv --out lab/data/processed/campaign_v1.csv
+& $python -m railsoc_ml.cli compare --dataset lab/data/processed/campaign_v1.csv --models-dir src/ml/models/campaign --report-dir src/ml/reports/generated/campaign
+```
+
+Choose fractions before reviewing test results. The default chronological targets are 50% train, 20% validation and 30% test. Whole run spans and equal timestamps move the cuts as needed. Check the resulting partition metadata and scenario coverage. If training and validation have too little clean normal traffic, or the test period lacks complete A/B/C runs, request campaign coverage in the affected periods. Random Forest is skipped unless the training slice has both classes and at least two positive runs. This minimum enables a smoke comparison. Stable estimates require more diverse runs for each scenario.
+
+For an aligned Wazuh export, add `--wazuh-alerts lab/data/processed/wazuh_alerts.jsonl` to the campaign comparison. This reuses the M3 evaluator for scenario rule IDs 100100–100399, using the same held-out interval and grace period as ML. The M3 run metric matches by time, so overlapping runs or coincident unrelated alerts can inflate run detection. Window-level ML metrics use the shared labels. Run comparisons require live Wazuh alert timestamps from the same UTC capture period. A later replay uses a different Wazuh ingestion time.
+
+## Wazuh handoff for Roshni
+
+1. Use the [example alert in results](reports/results.md) or export one line with `Get-Content lab/data/processed/ml_alerts.jsonl -TotalCount 1`. The offline example is a benign false positive. Use a dedicated lab validation session for it.
+2. Load the existing [RailSOC rules](../detection/siem/rules/railsoc_rules.xml) in the lab manager's rules directory. Open **Tools > Ruleset Test** on the manager dashboard and paste the exact JSON line, or copy the line to the lab manager as `/tmp/ml_alert_sample.jsonl` and run:
+
+   ```sh
+   sudo /var/ossec/bin/wazuh-logtest -U 100400:6:json < /tmp/ml_alert_sample.jsonl
+   ```
+
+   Confirm decoder `json` and rule `100400`. [Wazuh ruleset testing](https://documentation.wazuh.com/current/user-manual/ruleset/testing.html)
+3. To test collection, create an empty `/var/log/railsoc/ml_alerts.jsonl` readable by the lab manager. Add this block inside its `<ossec_config>` and apply the configuration using the team's manager deployment. Append the sample once after the collector starts. For future runs, hand off new lines once to this append-only collector file.
+
+   ```xml
+   <localfile>
+     <location>/var/log/railsoc/ml_alerts.jsonl</location>
+     <log_format>json</log_format>
+   </localfile>
+   ```
+
+   [Wazuh localfile configuration](https://documentation.wazuh.com/current/user-manual/reference/ossec-conf/localfile.html)
+4. In the lab dashboard, search the ingestion time range with `rule.id:100400 AND data.event.dataset:"ml.alert"`. Add `data.ml.model`, `data.ml.score`, `data.ml.threshold` and `data.source.ip` to the ML panel. Expand a row to inspect the original window bounds and top features. Capture the query and expanded row together, and capture the matched decoder and rule in the Ruleset Test screen.
+
+For the local report, open `src/ml/reports/generated/false_positives.png` and `confusion_matrices.png`. Capture either chart together with the report title and the held-out period in `comparison.md` if a screenshot is required. These charts use offline normal data. The Wazuh screenshots require a running lab manager.
