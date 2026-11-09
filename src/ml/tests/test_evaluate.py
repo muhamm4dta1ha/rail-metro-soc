@@ -1,5 +1,3 @@
-import math
-
 import pytest
 
 from railsoc_ml.evaluate import binary_metrics, false_alarms_per_hour
@@ -24,8 +22,9 @@ def test_a_perfect_detector_scores_one():
 
 def test_a_single_class_does_not_crash_but_has_no_auc():
     metrics = binary_metrics([0, 0, 0], [0.1, 0.2, 0.3], threshold=0.5)
-    assert math.isnan(metrics["roc_auc"]) and math.isnan(metrics["pr_auc"])
-    assert metrics["recall"] == 0.0
+    assert metrics["roc_auc"] is None and metrics["pr_auc"] is None
+    assert metrics["recall"] is None
+    assert metrics["unavailable"]["recall"] == "no positive windows"
 
 
 def test_false_alarms_per_hour():

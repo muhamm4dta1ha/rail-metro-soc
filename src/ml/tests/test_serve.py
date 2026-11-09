@@ -5,7 +5,7 @@ import pytest
 from railsoc_common.events import read_events, validate_event, write_events
 from railsoc_common.groundtruth import write_runs
 from railsoc_ml.cli import main
-from railsoc_ml.dataset import build_dataset
+from railsoc_ml.dataset import build_dataset, normal_windows
 from railsoc_ml.models import AnomalyDetector
 from railsoc_ml.serve import score_events, score_file
 
@@ -14,7 +14,7 @@ from railsoc_ml.serve import score_events, score_file
 def detector(stream):
     events, runs = stream
     data = build_dataset(events, runs)
-    normal = data[data["run_id"] == ""]
+    normal = normal_windows(data)
     model = AnomalyDetector(seed=1).fit(normal)
     model.calibrate(normal, target_fpr=0.01)
     return model

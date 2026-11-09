@@ -1,6 +1,6 @@
 import pytest
 
-from railsoc_ml.dataset import build_dataset
+from railsoc_ml.dataset import build_dataset, normal_windows
 from railsoc_ml.models import AnomalyDetector, SupervisedDetector, ThresholdBaseline
 
 
@@ -11,7 +11,7 @@ def data(stream):
 
 
 def fitted(data, **kwargs):
-    normal = data[data["run_id"] == ""]
+    normal = normal_windows(data)
     model = AnomalyDetector(seed=1, **kwargs).fit(normal)
     model.calibrate(normal, target_fpr=0.01)
     return model
@@ -26,7 +26,7 @@ def test_anomaly_detector_flags_the_attack_windows_and_few_normal_ones(data):
 
 
 def test_predict_requires_calibration(data):
-    normal = data[data["run_id"] == ""]
+    normal = normal_windows(data)
     with pytest.raises(RuntimeError, match="calibrate"):
         AnomalyDetector(seed=1).fit(normal).predict(data)
 
@@ -48,7 +48,7 @@ def test_unknown_method_is_rejected():
 
 
 def test_very_large_training_sets_are_subsampled(data):
-    normal = data[data["run_id"] == ""]
+    normal = normal_windows(data)
     model = AnomalyDetector(seed=1, max_train=50).fit(normal)
     assert model.scaler.n_samples_seen_ == 50
 
@@ -83,7 +83,7 @@ def test_supervised_detector_separates_the_known_attack_in_its_training_data(dat
     assert model.explain(data.iloc[0])
 
 
-def test_supervised_detector_without_attacks_scores_zero(data):
+def test_supervised_detector_refuses_benign_only_training(data):
     benign = data[data["run_id"] == ""]
-    model = SupervisedDetector(seed=1).fit(benign, benign["is_attack"])
-    assert (model.score(data) == 0).all()
+    with pytest.raises(ValueError, match="both benign and attack"):
+        SupervisedDetector(seed=1).fit(benign, benign["is_attack"])

@@ -1,6 +1,23 @@
-# Defaults for the ML pipeline (task M4-02). CLI flags override these.
-window_s = 10          # time window for features (seconds)
-target_fpr = 0.01      # share of NORMAL windows the anomaly detector may flag
-test_fraction = 0.3    # share of attack RUNS / benign TIME held out for testing
-seed = 1               # every random choice is seeded for reproducibility
-anomaly_method = "ocsvm"   # "ocsvm" or "isolation_forest" (see AnomalyDetector in models.py for why ocsvm)
+
+# CLI flags override these repository-relative defaults.
+window_s = 10
+target_fpr = 0.01
+test_fraction = 0.3
+validation_fraction = 0.2
+seed = 1
+anomaly_method = "ocsvm"
+nu = 0.01
+n_estimators = 200
+max_train = 5000
+min_failures = 5
+min_supervised_train_runs = 2
+run_grace_s = 30
+max_window_events = 100000
+
+[paths]
+runs = "lab/ground_truth/attack_runs.csv"
+dataset = "lab/data/processed/dataset_v1.csv"
+model = "src/ml/models/anomaly.joblib"
+models = "src/ml/models"
+alerts = "lab/data/processed/ml_alerts.jsonl"
+reports = "src/ml/reports/generated"
