@@ -1,0 +1,56 @@
+# M3 evidence-generation overlay (Roshni). Additive only - never edits src/simulation or
+# src/attacks compose/service definitions. Layer on top of the real lab compose file:
+#
+#   docker compose -f src/simulation/docker-compose.yml -f lab/ops/docker-compose.evidence.yml \
+#     --env-file src/simulation/.env --profile attacks up --build -d
+#
+# What it adds:
+#   - a real "attacker" image (fills the M2-03 placeholder) reachable on dmz_ops at the
+#     unallocated address 10.60.20.99 (not in config/assets.csv - the rogue/unauthorized source
+#     for scenarios A/B/C), with the lab/ tree mounted so scenario evidence lands in the real
+#     repo paths (lab/evidence/runs, lab/ground_truth/attack_runs.csv).
+#   - the railsoc_attacks package mounted into "occ" so a BASELINE run (which must legitimately
+#     use OCC's own address 10.60.20.20) can be executed with `docker compose exec occ ...`
+#     instead of spoofing an address another container already holds.
+#   - packet capture at the two victims (pis, station-plc) so attack traffic (attacker <-> victim)
+#     is actually captured - the existing occ-capture only sees traffic on OCC's own interface.
+name: rail-metro-soc
+
+services:
+  attacker:
+    image: railsoc-attacker:local
+    build:
+      context: ../..
+      dockerfile: src/attacks/docker/Dockerfile
+    profiles: ["attacks"]
+    networks:
+      dmz_ops:
+        ipv4_address: 10.60.20.99
+    volumes:
+      - ../../lab:/app/lab
+
+  occ:
+    volumes:
+      - ../../lab:/app/lab
+      - ../../src/attacks/railsoc_attacks:/app/railsoc_attacks:ro
+      # File-level mount only: a directory mount here would hide occ's own
+      # config/assets.csv and config/traffic_profiles.toml (ssh/modbus drivers need them).
+      - ../../src/attacks/config/lab_scope.toml:/app/config/lab_scope.toml:ro
+
+  pis-capture:
+    image: nicolaka/netshoot:latest
+    network_mode: "service:pis"
+    depends_on: [pis]
+    cap_add: [NET_ADMIN, NET_RAW]
+    volumes:
+      - ../../lab/data/raw/pcap:/pcap
+    command: ["tcpdump", "-i", "eth0", "-w", "/pcap/pis-%Y%m%d-%H%M%S.pcap", "-G", "600"]
+
+  station-plc-capture:
+    image: nicolaka/netshoot:latest
+    network_mode: "service:station-plc"
+    depends_on: [station-plc]
+    cap_add: [NET_ADMIN, NET_RAW]
+    volumes:
+      - ../../lab/data/raw/pcap:/pcap
+    command: ["tcpdump", "-i", "eth0", "-w", "/pcap/station-plc-%Y%m%d-%H%M%S.pcap", "-G", "600"]

@@ -1,0 +1,88 @@
+{
+  "actions": [],
+  "contract_version": "0.1",
+  "dry_run": false,
+  "end_utc": "2026-11-13T14:40:23.861Z",
+  "error": null,
+  "event_count": 6,
+  "event_identifier": "events.jsonl line number (1-based); schema has no event.id",
+  "evidence_mode": "live_client_observations",
+  "expected_indicators": [
+    "Burst of failed admin logins (HTTP 401 / sshd failures) from one non-allow-listed source",
+    "A successful admin login from that same source shortly after the failures",
+    "HTTP status codes and client response latency",
+    "Source address is not in the asset inventory allow-list for administrative access"
+  ],
+  "git_commit": null,
+  "measurements": [
+    {
+      "error": null,
+      "expected_status": 401,
+      "latency_ms": 1.231127000039578,
+      "status": 401
+    },
+    {
+      "error": null,
+      "expected_status": 401,
+      "latency_ms": 1.7476499999702355,
+      "status": 401
+    },
+    {
+      "error": null,
+      "expected_status": 401,
+      "latency_ms": 1.3242410000202653,
+      "status": 401
+    },
+    {
+      "error": null,
+      "expected_status": 401,
+      "latency_ms": 1.7713689999823146,
+      "status": 401
+    },
+    {
+      "error": null,
+      "expected_status": 401,
+      "latency_ms": 1.8597110000087014,
+      "status": 401
+    },
+    {
+      "error": null,
+      "expected_status": 200,
+      "latency_ms": 2.3799400000257265,
+      "status": 200
+    }
+  ],
+  "params": {
+    "attacker_ip": "10.60.20.99",
+    "baseline": false,
+    "duration_s": 12.0,
+    "rate_per_s": 2.0,
+    "request_count": 6,
+    "target_asset": "PIS-01",
+    "target_ip": "10.60.20.10"
+  },
+  "plan": {
+    "attacker_ips": [
+      "10.60.20.99"
+    ],
+    "victim_assets": [
+      "PIS-01"
+    ],
+    "victim_ips": [
+      "10.60.20.10"
+    ]
+  },
+  "procedure": "A",
+  "run_id": "RUN-A-20261113T144011Z-02",
+  "scenario_id": "A",
+  "sha256": {
+    "events.jsonl": "ef72e0b3c7c5c5e9756e2c4f3f2aba7baa5a9addddc7338ee2e198cdb105e484"
+  },
+  "start_utc": "2026-11-13T14:40:11.858Z",
+  "status": "completed",
+  "techniques": [
+    "T1110",
+    "T1078"
+  ],
+  "title": "Unauthorized administrative access to the PIS admin portal / maintenance jump host"
+}
