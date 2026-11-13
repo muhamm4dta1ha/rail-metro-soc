@@ -137,12 +137,13 @@ the existing README's own instructions) with RailSOC overrides layered via `dock
 and `config/wazuh_cluster/wazuh_manager.conf`:
 
 - Every published port bound to `127.0.0.1` only (HC-18).
-- Credentials in a local, git-ignored `.env`. `INDEXER_PASSWORD`/`DASHBOARD_PASSWORD` must stay
-  the upstream quickstart defaults (`SecretPassword`/`kibanaserver`) because they are tied to
-  bcrypt hashes baked into `config/wazuh_indexer/internal_users.yml` by the certs-generator step;
-  rotating them for real would mean regenerating those hashes with the indexer's own tool - flagged
-  here as a real, acknowledged gap rather than silently left broken (`API_PASSWORD`, which has no
-  such constraint, **was** changed).
+- Credentials in a local, git-ignored `.env`, **rotated from the upstream quickstart defaults**
+  (`SecretPassword`/`kibanaserver`) for this submission: new bcrypt hashes generated with the
+  indexer's own `plugins/opensearch-security/tools/hash.sh` and pushed into the live security
+  index with `securityadmin.sh` (the reserved `admin`/`kibanaserver` users reject password changes
+  through the REST API - `securityadmin.sh` is the correct tool). See
+  `siem/deploy/README.md` "Credentials" for the exact commands and why the hash and the `.env`
+  value have to be changed together.
 - `lab/data/raw` mounted read-only into the manager; `<localfile>` entries for `pis_app.jsonl`,
   `modbus_live.jsonl`, `ssh_live.jsonl`, `attack_modbus_events.jsonl` (Modbus-only lines from every
   run's `events.jsonl` - see HC note below), and `ml_alerts.jsonl`.
@@ -186,8 +187,15 @@ Real, validated queries with real result counts: `siem/queries/queries.md`.
 Dashboard: built via the OpenSearch Dashboards saved-objects API against the real indexer
 (`lab/ops/build_dashboard.py`), exported to `siem/dashboards/railsoc_dashboard.ndjson`. Panels:
 Authentication (A), Modbus (B), PIS request rate (C), ML alerts, and a security overview
-(alerts-by-rule, severity distribution, a detection timeline split by scenario range). Import it
-into a fresh Wazuh Dashboard via **Stack Management -> Saved Objects -> Import**.
+(alerts-by-rule, severity distribution, a detection timeline split by scenario range). A real
+screenshot of it rendering the real indexed dataset:
+`siem/dashboards/screenshots/railsoc_m3_dashboard.png`. Import the NDJSON into a fresh Wazuh
+Dashboard via **Stack Management -> Saved Objects -> Import** to reproduce it live. One real fix
+made getting here: the detection-timeline panel's scenario buckets originally used a numeric
+`range` aggregation on `rule.id`, which Wazuh indexes as `keyword` - OpenSearch rejected it
+(`"Saved field 'rule.id' is invalid for use with the 'Range' aggregation"`, visible on first render);
+switched to a `filters` aggregation with KQL range queries instead (works on a keyword field
+because every rule ID here is the same length, so lexicographic order matches numeric order).
 
 **A methodology note that affects both the dashboard numbers and section 3's tuning above:**
 Wazuh's `frequency`/`timeframe` correlation is evaluated against **wall-clock arrival time at
@@ -278,14 +286,31 @@ python scripts/check_all.py            # lint + 197 tests + compose config: all 
 | B | Function-code-3 reads from an address not in `config/assets.csv` | Modbus/TCP has no built-in auth - enforce source allow-listing at the network layer (firewall/ACL on `dmz_ops`), not just detection; today's rule (100201) is the detective control, a network-layer block would be the preventive one. |
 | C | Sustained request rate >2 req/s from one source against `/api/arrivals` | Add per-source rate limiting / a reverse proxy in front of the PIS stub; today's PIS stub has no such protection, which is exactly why it kept answering 200 under load instead of degrading visibly. |
 
-## 10. What is honestly still open
+## 11. Tuning changelog (task M3-11)
 
-- Dashboard panels were validated via the saved-objects API (structure, panel count, real
-  index-pattern reference) but not visually screenshotted from the browser in this environment
-  (self-signed cert, no GUI session here) - open `https://localhost` (accept the certificate
-  warning), log in `admin`/`SecretPassword`, and the dashboard is there under that exact title.
-- Indexer credentials are the upstream quickstart defaults (see section 4) - fine for a
-  `127.0.0.1`-only lab, flagged for anyone taking this past a lab setting.
-- `INDEXER_PASSWORD`/`DASHBOARD_PASSWORD` rotation, alerting playbooks (M3-09) and further
-  threshold tuning (M3-11) are explicitly out of scope for this pass and are backlog items per
-  `plan/PLAN.md`.
+Every threshold change below was made against real data (not guessed), in the order found:
+
+| Rule | Starter value | Real-world problem found | Final value | Evidence |
+|---|---|---|---|---|
+| 100101 (A, failure burst) | `frequency=8` (9 occurrences) | A real attack run only produces 5 failures (`request_count=6`) - would never reach 9 | `frequency=4` (5 occurrences) | `wazuh-logtest` on the real 5-failure sequence fires exactly on the 5th event; a 5-different-IPs negative test confirms `same_field` isn't accidentally bypassed |
+| 100200 (B, writes) | allow-list `10.60.10.23` only | OCC-01 (`10.60.20.20`) also does real "authorised maintenance" writes in this lab's Day-1 build - fired on 100% of real legitimate writes | allow-list both `10.60.10.23` and `10.60.20.20` | 0 false positives on real maintenance-write traffic after the fix; genuine unauthorized writes from `10.60.20.99` still fire |
+| 100201 (B, reads) | did not exist | starter only covered writes; `b_rogue_device.py` only reads - would have missed every real scenario B run | new rule, function-code 3 from outside `10.60.20.20` | 24/24 real unauthorized reads detected; 0/~2,600 real approved reads flagged |
+| 100300/100301 (C, 5xx) | unchanged | the PIS stub never returns 5xx under this load - 0 hits across the whole dataset | kept as-is (defense in depth for a backend that *can* degrade) | confirmed via `data.http.response.status_code >= 500` returning 0 on real attack traffic |
+| 100303 (C, rate) | did not exist; first version `frequency=14` (1.5 req/s) | real baseline traffic should never cross 1.5 req/s, but a **replayed** (not live-tailed) log file compresses real spacing into a near-instant burst and crossed it anyway | `frequency=19` (2 req/s) | genuine attack rate (~15-18 req/s) still trips it in <1s; confirmed **zero** false positives under live tailing after the widening (the replay-artifact hits are kept in the dataset as evidence, not deleted - see section 5) |
+| 100100-103, 100201/202, 100303 | - | a single `if_matched_sid` rule cannot bridge two differently-shaped events ("failure, then a later success") - confirmed with `wazuh-logtest`, not assumed | moved the A-scenario success correlation to a two-step SIEM query; added rule 100103 (level 3, audit) purely so the success event is indexed at all | see section 3 and `siem/queries/queries.md` |
+
+A real-time dashboard screenshot of this ruleset firing on the real dataset:
+`siem/dashboards/screenshots/railsoc_m3_dashboard.png`.
+
+## 12. What is honestly still open
+
+- `src/detection/wireshark/profile/` (an importable Wireshark colouring profile) is still an
+  empty starter stub - the display filters themselves (`wireshark/filters.md`) were all actually
+  used and validated against real pcaps (section 1), just not packaged as an importable profile.
+- Credentials are now rotated from the upstream quickstart defaults (admin/dashboard passwords
+  regenerated with the indexer's own `hash.sh` and pushed via `securityadmin.sh` - see
+  `siem/deploy/README.md` "Credentials"); they are still lab-only values suitable for a
+  `127.0.0.1`-bound deployment, not a production secret-management setup.
+- Playbooks (M3-09, `docs/report/playbooks.md`) cover detect/triage/contain/recover for all three
+  scenarios plus ML alerts, but describe manual actions only - no active-response/automatic
+  containment is configured anywhere in this lab (deliberately, per HC-02/HC-18).

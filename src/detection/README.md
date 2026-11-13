@@ -24,15 +24,18 @@ through the normal flow for review.)
 | `siem/decoders/railsoc_decoders.xml` | Decoders for non-JSON sources (schema events use the JSON decoder) | starter (M3-03, non-JSON sources not yet in scope) |
 | `siem/rules/railsoc_rules.xml` | Detection rules per scenario, validated with `wazuh-logtest` and against a live manager | **done** (M3-04) |
 | `siem/queries/queries.md` | Real queries with real result counts | **done** (M3-07) |
-| `siem/dashboards/railsoc_dashboard.ndjson` | Real dashboard export (5 panels, built from the real indexer) | **done** (M3-08) |
+| `siem/dashboards/railsoc_dashboard.ndjson`, `siem/dashboards/screenshots/` | Real dashboard export (10 panels) + a real browser screenshot of it rendering the real indexed data | **done** (M3-08) |
 | `wireshark/filters.md`, `wireshark/evidence/*.pcapng` | Display filters + real merged/de-duplicated pcaps; counts in evaluation.md | **done** (M3-05/M3-06); `wireshark/profile/` (importable colouring profile) still open |
 | `railsoc_detection/rule_lint.py` | Offline lint of rules/decoders (runs in CI) | done, 0 issues |
 | `railsoc_detection/evaluate.py` | Scores Wazuh alerts **and** ML alerts against the ground truth: detected?, time-to-detect, false alarms | **run against real data** - results in evaluation.md |
-| `lab/ops/` (repo root) | Additive evidence-generation harness: the attacker container this module needed but didn't exist yet, packet capture at the victims, and the dashboard-building script | new, M3-specific, does not touch M1/M2 |
+| `docs/report/playbooks.md` | Detect/triage/contain/recover per scenario, plus ML alerts | **done** (M3-09) |
+| `docs/report/evaluation.md` section 11 | Threshold tuning changelog: every rule change, why, and the evidence for it | **done** (M3-11) |
+| `lab/ops/` (repo root) | Additive evidence-generation harness: the attacker container this module needed but didn't exist yet, packet capture at the victims, the dashboard-building script, and a headless-browser screenshot script | new, M3-specific, does not touch M1/M2 |
 
-Still open / explicitly deferred (see evaluation.md section 10): alerting playbooks (M3-09),
-further threshold tuning (M3-11), rotating the indexer's default credentials, and a visual
-(browser) screenshot pass over the dashboard and Wireshark evidence.
+Still open (see evaluation.md section 12): an importable Wireshark colouring profile
+(`wireshark/profile/`) - the filters themselves were all used and validated against real pcaps,
+just not packaged as one. No active-response/automatic containment is configured anywhere in this
+lab, deliberately (HC-02/HC-18) - every playbook "contain" step is a manual action.
 
 ## Handoffs - who needs what from Roshni
 

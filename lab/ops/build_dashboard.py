@@ -9,12 +9,16 @@ Exports the result to src/detection/siem/dashboards/railsoc_dashboard.ndjson aft
 from __future__ import annotations
 
 import json
+import os
 import ssl
 import sys
 import urllib.request
 
 BASE = "https://localhost:443"
-AUTH = ("admin", "SecretPassword")
+# Set WAZUH_INDEXER_PASSWORD in your shell before running this - never hardcode the real
+# credential here (it gets committed). Defaults to the upstream wazuh-docker demo password so
+# this still works out of the box against an unrotated deployment.
+AUTH = ("admin", os.environ.get("WAZUH_INDEXER_PASSWORD", "SecretPassword"))
 INDEX_PATTERN_ID = "wazuh-alerts-railsoc"
 CTX = ssl.create_default_context()
 CTX.check_hostname = False
@@ -210,7 +214,20 @@ VISUALIZATIONS = [
             "aggs": [
                 {"id": "1", "enabled": True, "type": "count", "schema": "metric", "params": {}},
                 {"id": "2", "enabled": True, "type": "date_histogram", "schema": "segment", "params": {"field": "timestamp", "interval": "auto", "min_doc_count": 1}},
-                {"id": "3", "enabled": True, "type": "range", "schema": "group", "params": {"field": "rule.id", "ranges": [{"from": 100100, "to": 100199, "label": "A: admin access"}, {"from": 100200, "to": 100299, "label": "B: Modbus"}, {"from": 100300, "to": 100399, "label": "C: PIS disruption"}, {"from": 100400, "to": 100499, "label": "ML"}]}},
+                {
+                    "id": "3",
+                    "enabled": True,
+                    "type": "filters",
+                    "schema": "group",
+                    "params": {
+                        "filters": [
+                            {"input": {"query": "rule.id >= 100100 and rule.id <= 100199", "language": "kuery"}, "label": "A: admin access"},
+                            {"input": {"query": "rule.id >= 100200 and rule.id <= 100299", "language": "kuery"}, "label": "B: Modbus"},
+                            {"input": {"query": "rule.id >= 100300 and rule.id <= 100399", "language": "kuery"}, "label": "C: PIS disruption"},
+                            {"input": {"query": "rule.id >= 100400 and rule.id <= 100499", "language": "kuery"}, "label": "ML"},
+                        ]
+                    },
+                },
             ],
         },
         [{"meta": {"alias": None, "disabled": False, "negate": False}, "query": {"range": {"rule.id": {"gte": "100000", "lte": "100499"}}}}],
@@ -254,7 +271,9 @@ def build():
             "panelsJSON": json.dumps(panels),
             "optionsJSON": json.dumps({"useMargins": True, "hidePanelTitles": False}),
             "version": 1,
-            "timeRestore": False,
+            "timeRestore": True,
+            "timeFrom": "2026-11-13T14:00:00.000Z",
+            "timeTo": "now",
             "kibanaSavedObjectMeta": {"searchSourceJSON": json.dumps({"query": {"query": "", "language": "kuery"}, "filter": []})},
         },
         "references": references,
