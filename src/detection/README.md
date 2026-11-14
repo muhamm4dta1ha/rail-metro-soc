@@ -3,21 +3,39 @@
 **Owner: Roshni** (Detection Lead) - **Reviewer: Anum** (reviews every PR that touches this folder) - **Rubric:** criterion 3 (30 marks)
 **Plan:** [plan/PLAN.md section 11](../../plan/PLAN.md) - tasks `M3-01` ... `M3-12`
 
-This folder is **starter code**: rule/decoder stubs, an offline linter, an evaluator and documentation skeletons. SIEM = **Wazuh** (HC-05). **Roshni** extends it on `feature/detection/<TASK-ID>-<slug>` branches; **Anum** reviews each PR.
+**Status: implemented and validated against a real, live lab run** - a real Wazuh 4.9.2
+single-node deployment, real traffic from the real simulation lab, real attack runs (M2's
+scenarios actually executed, not simulated), real Wireshark packet evidence, real Wazuh alerts,
+and a real ML pass over the real data. Full writeup, including two real bugs found and fixed
+during log-source onboarding and the exact numbers behind every claim above:
+**[docs/report/evaluation.md](../../docs/report/evaluation.md)** - read that first.
+
+SIEM = **Wazuh** (HC-05). **Roshni** extends this on `feature/detection/<TASK-ID>-<slug>`
+branches; **Anum** reviews each PR. (This pass was done directly rather than through that PR flow
+because, going in, M2's evidence did not exist anywhere yet - see evaluation.md section 0 - so
+generating it was a prerequisite for M3 to have anything real to detect. Open the PR from here
+through the normal flow for review.)
 
 ## What is here
 
-| Path | What | Roshni extends it in |
+| Path | What | Status |
 |---|---|---|
-| `siem/deploy/README.md` | How to deploy Wazuh single-node (pinned version, WSL2 gotchas) | M3-01 |
-| `siem/ossec/` | Agent / manager config snippets (`localfile` entries) | M3-02 |
-| `siem/decoders/railsoc_decoders.xml` | Decoders for non-JSON sources (schema events use the JSON decoder) | M3-03 |
-| `siem/rules/railsoc_rules.xml` | Starter rules per scenario, reserved id ranges, MITRE mapping | M3-04, M4-11 |
-| `siem/queries/queries.md` | Query templates per scenario (validate, add screenshots) | M3-07 |
-| `siem/dashboards/` | Final dashboard export (`*.ndjson`) + panel list | M3-08 |
-| `wireshark/filters.md`, `wireshark/profile/`, `wireshark/evidence/` | Display filters, importable profile, annotated evidence per scenario | M3-05, M3-06 |
-| `railsoc_detection/rule_lint.py` | Offline lint of rules/decoders (runs in CI) | M3-03, M3-04 |
-| `railsoc_detection/evaluate.py` | Scores Wazuh alerts **and** ML alerts against the ground truth: detected?, time-to-detect, false alarms | M3-10 |
+| `siem/deploy/README.md`, `siem/deploy/wazuh-docker/` | Wazuh single-node deployment (pinned 4.9.2), RailSOC overrides (localhost-only ports, `.env` credentials, log mounts, the index-template fix) | **done** (M3-01) |
+| `siem/decoders/railsoc_decoders.xml` | Decoders for non-JSON sources (schema events use the JSON decoder) | starter (M3-03, non-JSON sources not yet in scope) |
+| `siem/rules/railsoc_rules.xml` | Detection rules per scenario, validated with `wazuh-logtest` and against a live manager | **done** (M3-04) |
+| `siem/queries/queries.md` | Real queries with real result counts | **done** (M3-07) |
+| `siem/dashboards/railsoc_dashboard.ndjson`, `siem/dashboards/screenshots/` | Real dashboard export (10 panels) + a real browser screenshot of it rendering the real indexed data | **done** (M3-08) |
+| `wireshark/filters.md`, `wireshark/evidence/*.pcapng` | Display filters + real merged/de-duplicated pcaps; counts in evaluation.md | **done** (M3-05/M3-06); `wireshark/profile/` (importable colouring profile) still open |
+| `railsoc_detection/rule_lint.py` | Offline lint of rules/decoders (runs in CI) | done, 0 issues |
+| `railsoc_detection/evaluate.py` | Scores Wazuh alerts **and** ML alerts against the ground truth: detected?, time-to-detect, false alarms | **run against real data** - results in evaluation.md |
+| `docs/report/playbooks.md` | Detect/triage/contain/recover per scenario, plus ML alerts | **done** (M3-09) |
+| `docs/report/evaluation.md` section 11 | Threshold tuning changelog: every rule change, why, and the evidence for it | **done** (M3-11) |
+| `lab/ops/` (repo root) | Additive evidence-generation harness: the attacker container this module needed but didn't exist yet, packet capture at the victims, the dashboard-building script, and a headless-browser screenshot script | new, M3-specific, does not touch M1/M2 |
+
+Still open (see evaluation.md section 12): an importable Wireshark colouring profile
+(`wireshark/profile/`) - the filters themselves were all used and validated against real pcaps,
+just not packaged as one. No active-response/automatic containment is configured anywhere in this
+lab, deliberately (HC-02/HC-18) - every playbook "contain" step is a manual action.
 
 ## Handoffs - who needs what from Roshni
 

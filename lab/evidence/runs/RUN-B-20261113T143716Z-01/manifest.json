@@ -1,0 +1,86 @@
+{
+  "actions": [],
+  "contract_version": "0.1",
+  "dry_run": false,
+  "end_utc": "2026-11-13T14:37:26.017Z",
+  "error": null,
+  "event_count": 8,
+  "event_identifier": "events.jsonl line number (1-based); schema has no event.id",
+  "evidence_mode": "live_client_observations",
+  "expected_indicators": [
+    "Read-only Modbus function 3 requests from an unapproved source",
+    "Repeated reads of monitoring registers 0..3",
+    "Higher request frequency than the approved OCC baseline"
+  ],
+  "git_commit": null,
+  "measurements": [
+    {
+      "latency_ms": 8.027394000009735,
+      "success": true
+    },
+    {
+      "latency_ms": 1.297645000022385,
+      "success": true
+    },
+    {
+      "latency_ms": 0.9425499999906606,
+      "success": true
+    },
+    {
+      "latency_ms": 1.589398000021447,
+      "success": true
+    },
+    {
+      "latency_ms": 1.4797799999541894,
+      "success": true
+    },
+    {
+      "latency_ms": 1.0099969999828318,
+      "success": true
+    },
+    {
+      "latency_ms": 1.4377609999769447,
+      "success": true
+    },
+    {
+      "latency_ms": 1.0942179999915425,
+      "success": true
+    }
+  ],
+  "params": {
+    "attacker_ip": "10.60.20.99",
+    "baseline": false,
+    "duration_s": 10.0,
+    "rate_per_s": 5.0,
+    "request_count": 8,
+    "target_assets": [
+      "PLC-01"
+    ],
+    "target_ips": [
+      "10.60.20.22"
+    ]
+  },
+  "plan": {
+    "attacker_ips": [
+      "10.60.20.99"
+    ],
+    "victim_assets": [
+      "PLC-01"
+    ],
+    "victim_ips": [
+      "10.60.20.22"
+    ]
+  },
+  "procedure": "B",
+  "run_id": "RUN-B-20261113T143716Z-01",
+  "scenario_id": "B",
+  "sha256": {
+    "events.jsonl": "7f6c42004c3e0a831ad0802963d3e53372793d5fe51fb2c5b70701839509cc33"
+  },
+  "start_utc": "2026-11-13T14:37:16.013Z",
+  "status": "completed",
+  "techniques": [
+    "T0846"
+  ],
+  "title": "Anomalous communications from an unknown (rogue) device in the station zone"
+}

@@ -29,7 +29,25 @@
     <group>authentication_failed,railsoc_a,</group>
   </rule>
 
-  <rule id="100101" level="10" frequency="8" timeframe="60">
+  <!-- M3-04 finding: our <alerts><log_alert_level>3</log_alert_level> means anything below
+       level 3 never reaches alerts.json or the indexer - a successful login (level 0 on its own)
+       was invisible to every SIEM query, so "did a failure burst end in a success?" could not be
+       answered from the indexer at all. This audit-level rule exists only so successful logins
+       are queryable (siem/queries/queries.md, scenario A second query) - it is not itself a
+       security alert. -->
+  <rule id="100103" level="3">
+    <if_sid>100000</if_sid>
+    <field name="event.dataset" type="pcre2">^pis\.app$</field>
+    <field name="event.action">login</field>
+    <field name="event.outcome">success</field>
+    <description>RailSOC A: PIS login success (audit)</description>
+    <group>authentication_success,railsoc_a,</group>
+  </rule>
+
+  <!-- Lowered from frequency=8 (9 occurrences) to frequency=4 (5 occurrences): the smallest
+       real attack run (default request_count=6 => 5 failures then 1 success) must not slip
+       through. Tuned against the real baseline capture - see docs/report/evaluation.md. -->
+  <rule id="100101" level="10" frequency="4" timeframe="60">
     <if_matched_sid>100100</if_matched_sid>
     <same_field>source.ip</same_field>
     <description>RailSOC A: repeated PIS login failures from one source (possible credential guessing)</description>
@@ -39,12 +57,28 @@
     <group>authentication_failures,railsoc_a,</group>
   </rule>
 
-  <!-- Scenario B: anomalous communications (TODO M3-04: new-asset and discovery-pattern rules) -->
+  <!-- M3-04: a declarative "success immediately after a failure burst, same source" rule was
+       tried here and removed after testing with wazuh-logtest. Wazuh's if_matched_sid only
+       re-evaluates the dependent rule on the SAME event that also satisfies the target rule's own
+       field conditions (verified empirically: a rule requiring event.outcome=success can never be
+       reached through if_matched_sid pointing at a rule that requires event.outcome=failure, since
+       there is no single event that is both). That correlation - "100101 fired, then a success
+       from the same source.ip soon after" - is done as a SIEM query instead; see
+       siem/queries/queries.md (scenario A, second query) and docs/report/evaluation.md. -->
+
+  <!-- Scenario B: anomalous communications
+       Fixed after live testing produced false positives: the starter rule only allow-listed
+       WS-03 (10.60.10.23, "maintenance engineering workstation" in config/assets.csv). In this
+       lab's actual Day-1 build, OCC-01 (10.60.20.20) also plays WS-03's maintenance-write role
+       (railsoc_sim/drivers/modbus_driver.py:maintenance_write_once, see assets.csv note on
+       OCC-01) - real periodic maintenance writes from the real normal-traffic driver were firing
+       this rule. Both addresses are now allow-listed; 10.60.10.23 stays for when WS-03 gets its
+       own host. -->
   <rule id="100200" level="10">
     <if_sid>100000</if_sid>
     <field name="event.dataset" type="pcre2">^scada\.command$</field>
     <field name="modbus.function_code" type="pcre2">^(5|6|15|16)$</field>
-    <field name="source.ip" type="pcre2" negate="yes">^10\.60\.10\.23$</field>
+    <field name="source.ip" type="pcre2" negate="yes">^10\.60\.10\.23$|^10\.60\.20\.20$</field>
     <description>RailSOC B: Modbus write from a source other than the engineering workstation</description>
     <mitre>
       <id>T0855</id>
@@ -52,7 +86,35 @@
     <group>railsoc_b,</group>
   </rule>
 
-  <!-- Scenario C: service disruption (TODO M3-04: rate-spike and health-check rules) -->
+  <!-- M3-04: function-code-3 (read) requests are the actual scenario B traffic (b_rogue_device.py
+       only reads - see src/attacks/railsoc_attacks/traffic.py:modbus_read); 100200 above only
+       covered writes and would miss every scenario B run. 10.60.20.20 is OCC-01, the only
+       approved poller per config/assets.csv - everything else reading PLC-01 is unapproved. -->
+  <rule id="100201" level="8">
+    <if_sid>100000</if_sid>
+    <field name="event.dataset" type="pcre2">^scada\.poll$</field>
+    <field name="modbus.function_code">3</field>
+    <field name="source.ip" type="pcre2" negate="yes">^10\.60\.20\.20$</field>
+    <description>RailSOC B: Modbus read (function code 3) from a source other than the approved OCC poller</description>
+    <mitre>
+      <id>T0846</id>
+    </mitre>
+    <group>railsoc_b,</group>
+  </rule>
+
+  <!-- Repeated unauthorized reads raise severity above a single stray probe (B's own expected
+       indicator: "higher request frequency than the approved OCC baseline"). -->
+  <rule id="100202" level="10" frequency="2" timeframe="30">
+    <if_matched_sid>100201</if_matched_sid>
+    <same_field>source.ip</same_field>
+    <description>RailSOC B: repeated unauthorized Modbus reads from one source (rogue device / reconnaissance)</description>
+    <mitre>
+      <id>T0846</id>
+    </mitre>
+    <group>railsoc_b,</group>
+  </rule>
+
+  <!-- Scenario C: service disruption -->
   <rule id="100300" level="3">
     <if_sid>100000</if_sid>
     <field name="event.dataset" type="pcre2">^pis\.app$</field>
@@ -64,6 +126,38 @@
   <rule id="100301" level="10" frequency="10" timeframe="30">
     <if_matched_sid>100300</if_matched_sid>
     <description>RailSOC C: burst of PIS server errors (possible service disruption)</description>
+    <mitre>
+      <id>T1499</id>
+    </mitre>
+    <group>railsoc_c,</group>
+  </rule>
+
+  <!-- M3-04: the PIS stub (src/simulation/railsoc_sim/pis_stub.py) is a plain ThreadingHTTPServer
+       that keeps answering 200 under load - c_service_disruption.py's own expected indicators say
+       so ("...if observed" / "no actual outage" per docs/report/evaluation.md). A rule that only
+       fires on 5xx therefore never fires on this scenario. This pair detects the REQUEST RATE
+       itself, independent of status code, grouped by source. Normal OCC traffic
+       (railsoc_sim/drivers/http_driver.py) sleeps 1-4 s between requests, i.e. <=1 req/s per
+       source; the attack's test phase defaults to rate_per_s=20. 1.5 req/s sustained for 10 s
+       cleanly separates the two - tuned against the real baseline capture. -->
+  <rule id="100302" level="3">
+    <if_sid>100000</if_sid>
+    <field name="event.dataset" type="pcre2">^pis\.app$</field>
+    <field name="event.category">web</field>
+    <field name="event.action">request</field>
+    <description>RailSOC C: PIS web request (rate-tracking base rule)</description>
+    <group>railsoc_c,</group>
+  </rule>
+
+  <!-- Margin widened after live testing: real baseline traffic (railsoc_sim http_driver, 1-4 s
+       sleep) peaks under 10 matching events per 10 s from one source; the attack's default
+       rate_per_s=20 produces ~150-180. frequency=19 (20 occurrences/10s = 2 req/s) keeps a safe
+       2x+ margin over the observed baseline ceiling while still firing almost immediately into
+       an attack burst. -->
+  <rule id="100303" level="10" frequency="19" timeframe="10">
+    <if_matched_sid>100302</if_matched_sid>
+    <same_field>source.ip</same_field>
+    <description>RailSOC C: abnormal PIS request rate from one source (possible service disruption)</description>
     <mitre>
       <id>T1499</id>
     </mitre>

@@ -1,0 +1,82 @@
+{
+  "actions": [
+    "Request-rate test only; availability degradation must be established from measurements"
+  ],
+  "contract_version": "0.1",
+  "dry_run": false,
+  "end_utc": "2026-11-13T15:31:32.091Z",
+  "error": null,
+  "event_count": 126,
+  "event_identifier": "events.jsonl line number (1-based); schema has no event.id",
+  "evidence_mode": "live_client_observations",
+  "expected_indicators": [
+    "Increased GET /api/arrivals request rate compared with baseline",
+    "Measured latency, HTTP errors and timeouts, if observed",
+    "Recovery probe results after the bounded test interval"
+  ],
+  "git_commit": null,
+  "measurements": [
+    {
+      "elapsed_s": 3.0002652759999364,
+      "failures": 0,
+      "mean_latency_ms": 4.895458333218509,
+      "phase": "baseline",
+      "rate_per_s": 0.9999115824850361,
+      "requests": 3,
+      "successes": 3,
+      "timeouts": 0
+    },
+    {
+      "elapsed_s": 6.000043497000206,
+      "failures": 0,
+      "mean_latency_ms": 1.7342812666394518,
+      "phase": "test",
+      "rate_per_s": 19.99985501105041,
+      "requests": 120,
+      "successes": 120,
+      "timeouts": 0
+    },
+    {
+      "elapsed_s": 3.0004530459996204,
+      "failures": 0,
+      "mean_latency_ms": 15.016845666650624,
+      "phase": "recovery",
+      "rate_per_s": 0.9998490074689806,
+      "requests": 3,
+      "successes": 3,
+      "timeouts": 0
+    }
+  ],
+  "params": {
+    "attacker_ip": "10.60.20.99",
+    "baseline": false,
+    "duration_s": 12.0,
+    "rate_per_s": 20.0,
+    "target_asset": "PIS-01",
+    "target_ip": "10.60.20.10"
+  },
+  "plan": {
+    "attacker_ips": [
+      "10.60.20.99"
+    ],
+    "victim_assets": [
+      "PIS-01"
+    ],
+    "victim_ips": [
+      "10.60.20.10"
+    ]
+  },
+  "procedure": "C",
+  "run_id": "RUN-C-20261113T153120Z-01",
+  "scenario_id": "C",
+  "sha256": {
+    "events.jsonl": "01d9ae10427bbf03ab655bc0d36e814acb92baa2331268ec8f78970281fecdac"
+  },
+  "start_utc": "2026-11-13T15:31:20.086Z",
+  "status": "completed",
+  "techniques": [
+    "T1499",
+    "T0814"
+  ],
+  "title": "Service disruption (availability degradation) of the simulated PIS / MQTT broker"
+}

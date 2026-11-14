@@ -1,0 +1,58 @@
+{
+  "actions": [],
+  "contract_version": "0.1",
+  "dry_run": false,
+  "end_utc": "2026-11-13T15:59:01.349Z",
+  "error": null,
+  "event_count": 1,
+  "event_identifier": "events.jsonl line number (1-based); schema has no event.id",
+  "evidence_mode": "live_client_observations",
+  "expected_indicators": [
+    "Burst of failed admin logins (HTTP 401 / sshd failures) from one non-allow-listed source",
+    "A successful admin login from that same source shortly after the failures",
+    "HTTP status codes and client response latency",
+    "Source address is not in the asset inventory allow-list for administrative access"
+  ],
+  "git_commit": null,
+  "measurements": [
+    {
+      "error": null,
+      "expected_status": 200,
+      "latency_ms": 7.7920510002513765,
+      "status": 200
+    }
+  ],
+  "params": {
+    "attacker_ip": "10.60.20.20",
+    "baseline": true,
+    "duration_s": 15.0,
+    "rate_per_s": 2.0,
+    "request_count": 6,
+    "target_asset": "PIS-01",
+    "target_ip": "10.60.20.10"
+  },
+  "plan": {
+    "attacker_ips": [
+      "10.60.20.20"
+    ],
+    "victim_assets": [
+      "PIS-01"
+    ],
+    "victim_ips": [
+      "10.60.20.10"
+    ]
+  },
+  "procedure": "A",
+  "run_id": "RUN-BASELINE-20261113T155846Z-01",
+  "scenario_id": "BASELINE",
+  "sha256": {
+    "events.jsonl": "b6b715a3d8f0754487ff87c0b9225572bcbe94541ba50e9c41638d3ccf478f52"
+  },
+  "start_utc": "2026-11-13T15:58:46.346Z",
+  "status": "completed",
+  "techniques": [
+    "T1110",
+    "T1078"
+  ],
+  "title": "Unauthorized administrative access to the PIS admin portal / maintenance jump host"
+}

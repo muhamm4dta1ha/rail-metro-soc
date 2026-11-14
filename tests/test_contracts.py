@@ -32,7 +32,7 @@ ALLOWED_ROOT_FILES = {
     ".editorconfig",
     ".dockerignore",
 }
-LOCAL_ARTIFACTS = {".git", ".venv", "venv", ".pytest_cache", ".ruff_cache", "build", "dist"}
+LOCAL_ARTIFACTS = {".git", ".venv", "venv", ".pytest_cache", ".ruff_cache", "build", "dist", ".claude"}
 MODULES = {"common", "simulation", "attacks", "detection", "ml"}
 
 
